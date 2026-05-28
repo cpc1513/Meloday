@@ -1,0 +1,45 @@
+:root {
+  --bg-page: #F5F2EE;
+  --bg-canvas: #FBFAF8;
+  --bg-card: rgba(255, 255, 255, 0.86);
+  --bg-card-solid: #FFFFFF;
+  --bg-input: #F8F5F0;
+  --bg-sidebar: rgba(251, 250, 248, 0.88);
+  --bg-hover: #EEE9E2;
+  --bg-pressed: #E6DFD6;
+
+  --text-primary: #211F1B;
+  --text-secondary: #716A61;
+  --text-tertiary: #A9A198;
+
+  --accent: #9C735D;
+  --accent-soft: #E8D8C8;
+  --accent-dark: #25231F;
+  --accent-green: #3F6B5A;
+  --accent-blue: #536B82;
+
+  --border: #E2DDD5;
+  --border-light: #EEE9E2;
+
+  --shadow-sm: 0 10px 30px rgba(38, 34, 28, 0.05);
+  --shadow-md: 0 22px 60px rgba(37, 35, 31, 0.10);
+  --shadow-focus: 0 0 0 4px rgba(156, 115, 93, 0.14);
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 28px;
+  --space-4xl: 32px;
+
+  --font-sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Microsoft YaHei', sans-serif;
+}

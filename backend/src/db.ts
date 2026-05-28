@@ -1,0 +1,89 @@
+import sqlite3 from 'sqlite3';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '..', '..', 'data', 'meloday.db');
+
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
+const db = new sqlite3.Database(dbPath);
+
+export function run(sql: string, params: any[] = []): Promise<{ lastID: number; changes: number }> {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) reject(err);
+      else resolve({ lastID: this.lastID, changes: this.changes });
+    });
+  });
+}
+
+export function get<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row as T);
+    });
+  });
+}
+
+export function all<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows as T[]);
+    });
+  });
+}
+
+export function initDb(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL UNIQUE,
+        content TEXT NOT NULL,
+        emotions TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS playlists (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entry_id INTEGER NOT NULL UNIQUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS songs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        playlist_id INTEGER NOT NULL,
+        position INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        artist TEXT NOT NULL,
+        album TEXT,
+        cover_url TEXT,
+        netease_id INTEGER,
+        reason TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS plays (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        song_id INTEGER NOT NULL,
+        played_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        duration INTEGER,
+        FOREIGN KEY (song_id) REFERENCES songs(id)
+      );
+    `, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+}
+
+export default db;
