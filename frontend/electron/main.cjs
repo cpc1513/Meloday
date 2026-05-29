@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -24,7 +24,9 @@ function createWindow() {
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    frame: false,
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: 16, y: 14 },
     icon: path.join(__dirname, '../dist/meloday-app-icon.png'),
     webPreferences: {
       nodeIntegration: false,
@@ -47,6 +49,25 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+ipcMain.handle('window:minimize', () => {
+  BrowserWindow.getFocusedWindow()?.minimize();
+});
+
+ipcMain.handle('window:maximize-toggle', () => {
+  const win = BrowserWindow.getFocusedWindow();
+  if (!win) return false;
+  if (win.isMaximized()) {
+    win.unmaximize();
+    return false;
+  }
+  win.maximize();
+  return true;
+});
+
+ipcMain.handle('window:close', () => {
+  BrowserWindow.getFocusedWindow()?.close();
+});
 
 function startBackend() {
   // 判断是否在打包后的环境

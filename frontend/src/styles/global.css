@@ -63,9 +63,110 @@ a {
   min-height: 100vh;
 }
 
+.app-frame {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.titlebar {
+  height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 0 10px 0 14px;
+  background:
+    linear-gradient(180deg, rgba(251, 250, 248, 0.94), rgba(246, 242, 237, 0.78));
+  border-bottom: 1px solid rgba(226, 221, 213, 0.76);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.74) inset;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.titlebar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 190px;
+}
+
+.titlebar-mark {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 16px rgba(37, 35, 31, 0.08));
+}
+
+.titlebar-name {
+  font-size: 13px;
+  line-height: 1.05;
+  font-weight: 780;
+  color: var(--text-primary);
+  letter-spacing: 0;
+}
+
+.titlebar-subtitle {
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 650;
+  color: var(--text-tertiary);
+}
+
+.titlebar-drag {
+  height: 100%;
+}
+
+.titlebar-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-button {
+  width: 32px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.44);
+  border: 1px solid rgba(226, 221, 213, 0.72);
+  box-shadow: 0 8px 20px rgba(37, 35, 31, 0.04);
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.titlebar-button svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.titlebar-button:hover {
+  transform: translateY(-1px);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: rgba(212, 206, 199, 0.95);
+}
+
+.titlebar-button-close:hover {
+  background: #B85B52;
+  border-color: #B85B52;
+  color: #fff;
+}
+
 .app-shell {
   display: flex;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
   background: transparent;
   color: var(--text-primary);
 }

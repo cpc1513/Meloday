@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import TitleBar from './components/TitleBar';
 import { ToastProvider } from './components/Toast';
 import MiniPlayer from './components/MiniPlayer';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -14,17 +15,20 @@ export default function App() {
     <ErrorBoundary>
       <ToastProvider>
         <PlayerProvider>
-          <div className="app-shell">
-            <Sidebar />
-            <main className="app-main">
-              <Routes>
-                <Route path="/" element={<DiaryPage />} />
-                <Route path="/calendar" element={<CalendarPage />} />
-                <Route path="/history" element={<HistoryPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-              </Routes>
-            </main>
-            <MiniPlayer />
+          <div className="app-frame">
+            <TitleBar />
+            <div className="app-shell">
+              <Sidebar />
+              <main className="app-main">
+                <Routes>
+                  <Route path="/" element={<DiaryPage />} />
+                  <Route path="/calendar" element={<CalendarPage />} />
+                  <Route path="/history" element={<HistoryPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                </Routes>
+              </main>
+              <MiniPlayer />
+            </div>
           </div>
         </PlayerProvider>
       </ToastProvider>
