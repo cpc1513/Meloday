@@ -1,5 +1,19 @@
+import { useEffect, useState } from 'react';
+
 export default function TitleBar() {
   const windowControls = window.melodayWindow;
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    if (!windowControls) return;
+    windowControls.isMaximized().then(setIsMaximized).catch(() => setIsMaximized(false));
+  }, [windowControls]);
+
+  const handleToggleMaximize = async () => {
+    if (!windowControls) return;
+    const nextState = await windowControls.toggleMaximize();
+    setIsMaximized(nextState);
+  };
 
   return (
     <header className="titlebar">
@@ -22,10 +36,10 @@ export default function TitleBar() {
           <button
             type="button"
             className="titlebar-button"
-            aria-label="最大化或还原"
-            onClick={() => windowControls.toggleMaximize()}
+            aria-label={isMaximized ? '还原窗口' : '最大化'}
+            onClick={handleToggleMaximize}
           >
-            <MaximizeIcon />
+            {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
           </button>
           <button
             type="button"
@@ -47,6 +61,15 @@ function MinimizeIcon() {
 
 function MaximizeIcon() {
   return <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.4" /></svg>;
+}
+
+function RestoreIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">
+      <path d="M4.2 3.1h5.7v5.7" />
+      <rect x="2.9" y="4.4" width="5.7" height="5.7" rx="1.2" />
+    </svg>
+  );
 }
 
 function CloseIcon() {

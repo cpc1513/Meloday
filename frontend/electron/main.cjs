@@ -65,6 +65,10 @@ ipcMain.handle('window:maximize-toggle', () => {
   return true;
 });
 
+ipcMain.handle('window:is-maximized', () => {
+  return BrowserWindow.getFocusedWindow()?.isMaximized() ?? false;
+});
+
 ipcMain.handle('window:close', () => {
   BrowserWindow.getFocusedWindow()?.close();
 });

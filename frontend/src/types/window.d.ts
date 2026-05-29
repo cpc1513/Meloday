@@ -5,6 +5,7 @@ declare global {
     melodayWindow?: {
       minimize: () => Promise<void>;
       toggleMaximize: () => Promise<boolean>;
+      isMaximized: () => Promise<boolean>;
       close: () => Promise<void>;
     };
   }
