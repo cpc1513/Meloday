@@ -79,7 +79,7 @@ a {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
-  padding: 0 10px 0 14px;
+  padding: 0 10px 0 24px;
   background:
     linear-gradient(180deg, rgba(251, 250, 248, 0.94), rgba(246, 242, 237, 0.78));
   border-bottom: 1px solid rgba(226, 221, 213, 0.76);
@@ -91,31 +91,15 @@ a {
 .titlebar-brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-width: 190px;
-}
-
-.titlebar-mark {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  filter: drop-shadow(0 8px 16px rgba(37, 35, 31, 0.08));
+  min-width: 140px;
 }
 
 .titlebar-name {
-  font-size: 13px;
-  line-height: 1.05;
+  font-size: 14px;
+  line-height: 1;
   font-weight: 780;
   color: var(--text-primary);
   letter-spacing: 0;
-}
-
-.titlebar-subtitle {
-  margin-top: 2px;
-  font-size: 10px;
-  line-height: 1;
-  font-weight: 650;
-  color: var(--text-tertiary);
 }
 
 .titlebar-drag {

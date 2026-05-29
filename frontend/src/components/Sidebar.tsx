@@ -20,31 +20,9 @@ export default function Sidebar() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      padding: '22px 10px 18px',
+      padding: '74px 10px 18px',
       flexShrink: 0,
     }}>
-      <button
-        onClick={() => navigate('/')}
-        aria-label="回到今日"
-        style={{
-          width: 58,
-          height: 58,
-          borderRadius: 18,
-          background: 'transparent',
-          border: 'none',
-          boxShadow: 'none',
-          display: 'grid',
-          placeItems: 'center',
-          marginBottom: 26,
-        }}
-      >
-        <img
-          src="./meloday-mark.png"
-          alt="Meloday"
-          style={{ width: 56, height: 52, objectFit: 'contain' }}
-        />
-      </button>
-
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
         {navItems.map(item => {
           const isActive = location.pathname === item.path;
