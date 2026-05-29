@@ -20,7 +20,7 @@ export default function Sidebar() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      padding: '74px 10px 18px',
+      padding: '40px 10px 18px',
       flexShrink: 0,
     }}>
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>

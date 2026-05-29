@@ -18,7 +18,11 @@ export default function TitleBar() {
   return (
     <header className="titlebar">
       <div className="titlebar-brand">
-        <div className="titlebar-name">Meloday</div>
+        <img src="./meloday-mark.png" alt="" className="titlebar-mark" />
+        <div>
+          <div className="titlebar-name">Meloday</div>
+          <div className="titlebar-subtitle">日记 · 音乐 · 你</div>
+        </div>
       </div>
 
       <div className="titlebar-drag" />
