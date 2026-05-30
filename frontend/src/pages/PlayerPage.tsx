@@ -18,12 +18,12 @@ export default function PlayerPage() {
   const [isFavoriteBusy, setIsFavoriteBusy] = useState(false);
 
   useEffect(() => {
-    if (!currentSong?.netease_id) return;
+    if (!currentSong?.id) return;
     let cancelled = false;
-    getLyrics(currentSong.netease_id)
+    getLyrics(currentSong.id)
       .then(data => {
         if (cancelled) return;
-        setLyricsSongId(currentSong.netease_id || null);
+        setLyricsSongId(currentSong.id || null);
         setLyrics(data.lines || []);
         setLyricsMessage(data.lines?.length ? '' : data.message || '暂无可用歌词');
       })
@@ -34,14 +34,14 @@ export default function PlayerPage() {
         }
       });
     return () => { cancelled = true; };
-  }, [currentSong?.netease_id]);
+  }, [currentSong?.id]);
 
   const lyricsForCurrentSong = useMemo(
-    () => (lyricsSongId === currentSong?.netease_id ? lyrics : []),
-    [currentSong?.netease_id, lyrics, lyricsSongId]
+    () => (lyricsSongId === currentSong?.id ? lyrics : []),
+    [currentSong?.id, lyrics, lyricsSongId]
   );
-  const currentLyricsMessage = currentSong?.netease_id
-    ? (lyricsSongId === currentSong.netease_id ? lyricsMessage : '正在加载歌词...')
+  const currentLyricsMessage = currentSong?.id
+    ? (lyricsSongId === currentSong.id ? lyricsMessage : '正在加载歌词...')
     : '当前歌曲暂无在线歌词';
 
   const activeLyricIndex = useMemo(() => {

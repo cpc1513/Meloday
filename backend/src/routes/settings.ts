@@ -13,6 +13,9 @@ router.get('/status', (_req, res) => {
     status: 'ok',
     deepseek_configured: Boolean(process.env.DEEPSEEK_API_KEY),
     database_path: databasePath,
+    music_source: 'qq',
+    music_source_label: 'QQ 音乐',
+    music_source_mode: '免 cookie，受版权限制歌曲会自动跳过',
     version: '1.0.0'
   });
 });

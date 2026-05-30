@@ -93,6 +93,12 @@ export default function SettingsPage() {
           </div>
         </SettingCard>
 
+        <SettingCard title="音乐源" desc={settings?.music_source_mode || '当前生成歌单使用 QQ 音乐源。'}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 760 }}>
+            {settings?.music_source_label || 'QQ 音乐'}
+          </div>
+        </SettingCard>
+
         <SettingCard title="数据目录" desc={settings?.database_path || '当前环境暂未返回数据库路径'}>
           <button onClick={handleOpenDataDir} className="ghost-button" style={{ minHeight: 34 }}>
             打开目录

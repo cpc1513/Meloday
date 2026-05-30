@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { run, get, all } from '../db.js';
 import { analyzeEmotions, recommendPlaylist } from '../services/deepseek.js';
-import { findPlayableSong } from '../services/netease.js';
+import { findPlayableSong } from '../services/qqmusic.js';
 
 const router = Router();
 
@@ -66,15 +66,18 @@ router.post('/', async (req, res) => {
     // 并发搜索所有推荐歌曲，避免串行超时
     const songPromises = recommendations.map(async (rec, i) => {
       const keyword = `${rec.song} ${rec.artist}`;
-      const neteaseSong = await findPlayableSong(keyword);
-      if (!neteaseSong) return null;
+      const qqSong = await findPlayableSong(keyword);
+      if (!qqSong) return null;
       return {
         position: i + 1,
-        name: neteaseSong.name,
-        artist: neteaseSong.artist,
-        album: neteaseSong.album,
-        cover_url: neteaseSong.coverUrl,
-        netease_id: neteaseSong.id,
+        name: qqSong.name,
+        artist: qqSong.artist,
+        album: qqSong.album,
+        cover_url: qqSong.coverUrl,
+        netease_id: null,
+        music_source: 'qq',
+        source_id: qqSong.id,
+        media_id: qqSong.mediaId,
         reason: rec.reason,
       };
     });
@@ -94,8 +97,8 @@ router.post('/', async (req, res) => {
 
     for (const song of songs) {
       await run(
-        'INSERT INTO songs (playlist_id, position, name, artist, album, cover_url, netease_id, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [playlistId, song.position, song.name, song.artist, song.album, song.cover_url, song.netease_id, song.reason]
+        'INSERT INTO songs (playlist_id, position, name, artist, album, cover_url, netease_id, music_source, source_id, media_id, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [playlistId, song.position, song.name, song.artist, song.album, song.cover_url, song.netease_id, song.music_source, song.source_id, song.media_id, song.reason]
       );
     }
 

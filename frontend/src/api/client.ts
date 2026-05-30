@@ -41,13 +41,13 @@ export async function getRecentEntries(): Promise<Entry[]> {
   return res.data;
 }
 
-export async function getPlayUrl(neteaseId: number): Promise<{ url: string; expires_in: number }> {
-  const res = await client.get(`/songs/${neteaseId}/play-url`);
+export async function getPlayUrl(songId: number): Promise<{ url: string; expires_in: number; source?: string }> {
+  const res = await client.get(`/songs/${songId}/play-url`);
   return res.data;
 }
 
-export async function getLyrics(neteaseId: number): Promise<{ lines: LyricLine[]; raw: string; message?: string | null }> {
-  const res = await client.get(`/songs/${neteaseId}/lyrics`);
+export async function getLyrics(songId: number): Promise<{ lines: LyricLine[]; raw: string; message?: string | null }> {
+  const res = await client.get(`/songs/${songId}/lyrics`);
   return res.data;
 }
 

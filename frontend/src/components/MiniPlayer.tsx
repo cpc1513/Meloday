@@ -18,7 +18,7 @@ export default function MiniPlayer() {
   const [expanded, setExpanded] = useState(false);
   const [isLoadingUrl, setIsLoadingUrl] = useState(false);
 
-  const canPlayCurrentSong = Boolean(currentSong?.netease_id);
+  const canPlayCurrentSong = Boolean(currentSong?.id);
   const currentSongName = currentSong?.name || '';
 
   useEffect(() => {
@@ -39,10 +39,10 @@ export default function MiniPlayer() {
   }, [isPlaying, pause]);
 
   useEffect(() => {
-    if (!currentSong?.netease_id || !isPlaying) return;
+    if (!currentSong?.id || !isPlaying) return;
 
     let cancelled = false;
-    const songId = currentSong.netease_id;
+    const songId = currentSong.id;
 
     const loadAndPlay = async () => {
       setIsLoadingUrl(true);
@@ -84,7 +84,8 @@ export default function MiniPlayer() {
     };
   }, [
     currentSong?.id,
-    currentSong?.netease_id,
+    currentSong?.music_source,
+    currentSong?.source_id,
     currentSongName,
     isPlaying,
     next,
