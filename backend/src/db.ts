@@ -48,6 +48,7 @@ export function initDb(): Promise<void> {
         date TEXT NOT NULL UNIQUE,
         content TEXT NOT NULL,
         emotions TEXT,
+        is_favorite INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -67,6 +68,9 @@ export function initDb(): Promise<void> {
         album TEXT,
         cover_url TEXT,
         netease_id INTEGER,
+        music_source TEXT DEFAULT 'netease',
+        source_id TEXT,
+        media_id TEXT,
         reason TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE
@@ -79,9 +83,26 @@ export function initDb(): Promise<void> {
         duration INTEGER,
         FOREIGN KEY (song_id) REFERENCES songs(id)
       );
+
+      CREATE TABLE IF NOT EXISTS lyrics_cache (
+        netease_id TEXT PRIMARY KEY,
+        raw_lyrics TEXT,
+        parsed_lyrics TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
     `, (err) => {
       if (err) reject(err);
-      else resolve();
+      else {
+        db.run('ALTER TABLE entries ADD COLUMN is_favorite INTEGER DEFAULT 0', () => {
+          db.run("ALTER TABLE songs ADD COLUMN music_source TEXT DEFAULT 'netease'", () => {
+            db.run('ALTER TABLE songs ADD COLUMN source_id TEXT', () => {
+              db.run('ALTER TABLE songs ADD COLUMN media_id TEXT', () => {
+                resolve();
+              });
+            });
+          });
+        });
+      }
     });
   });
 }

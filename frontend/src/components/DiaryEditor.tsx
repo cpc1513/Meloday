@@ -161,7 +161,7 @@ export default function DiaryEditor({ value, onChange, onSubmit, isLoading }: Pr
               ))}
             </div>
             <div style={{ fontSize: 12, opacity: 0.76, fontWeight: 650 }}>预计生成</div>
-            <div style={{ marginTop: 3, fontSize: 18, fontWeight: 760 }}>3 首今日歌单</div>
+            <div style={{ marginTop: 3, fontSize: 18, fontWeight: 760 }}>10 首今日歌单</div>
           </div>
         </aside>
       </div>

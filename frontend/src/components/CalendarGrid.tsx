@@ -17,6 +17,9 @@ interface CalendarCell {
   emotions: string[] | null;
   songCover: string | null;
   emotionColor: string | null;
+  emotionKeyword: string | null;
+  holiday: string | null;
+  isFavorite: boolean;
 }
 
 export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
@@ -87,6 +90,9 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
       emotions: cell.emotions,
       song_cover: cell.songCover,
       emotion_color: cell.emotionColor,
+      emotion_keyword: cell.emotionKeyword,
+      holiday: cell.holiday,
+      is_favorite: cell.isFavorite,
     });
   };
 
@@ -141,6 +147,20 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
               <span style={{ fontSize: 13, fontWeight: 760 }}>
                 {cell.dayOfMonth}
               </span>
+              {(cell.holiday || cell.emotionKeyword) && (
+                <span style={{
+                  maxWidth: '100%',
+                  fontSize: 10,
+                  lineHeight: 1.15,
+                  fontWeight: 760,
+                  color: isSelected ? 'rgba(255,255,255,0.78)' : 'var(--text-tertiary)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {cell.emotionKeyword || cell.holiday}
+                </span>
+              )}
               {cell.hasEntry ? (
                 <span style={{
                   alignSelf: 'flex-end',
@@ -150,6 +170,7 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
                   background: cell.songCover ? `url(${cell.songCover}) center/cover` : cell.emotionColor || 'var(--accent-soft)',
                   border: '1px solid rgba(255,255,255,0.72)',
                   boxShadow: '0 8px 16px rgba(37,35,31,0.10)',
+                  position: 'relative',
                 }} />
               ) : (
                 <span style={{
@@ -177,6 +198,9 @@ function toCell(date: string, dayOfMonth: number, isCurrentMonth: boolean, entry
     emotions: entry?.emotions || null,
     songCover: entry?.song_cover || null,
     emotionColor: entry?.emotion_color || null,
+    emotionKeyword: entry?.emotion_keyword || null,
+    holiday: entry?.holiday || null,
+    isFavorite: Boolean(entry?.is_favorite),
   };
 }
 

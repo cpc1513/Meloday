@@ -10,6 +10,11 @@ export interface NeteaseSong {
   coverUrl: string;
 }
 
+export interface LyricLine {
+  time: number;
+  text: string;
+}
+
 /** 搜索歌曲，返回多个候选 */
 export async function searchSongs(keyword: string, limit = 5): Promise<NeteaseSong[]> {
   try {
@@ -49,6 +54,20 @@ export async function getPlayUrl(id: number): Promise<string | null> {
   }
 }
 
+export async function getLyrics(id: number): Promise<{ raw: string; lines: LyricLine[] }> {
+  try {
+    const res = await axios.get(`${BASE_URL}/lyric`, {
+      params: { id },
+      timeout: 12000,
+    });
+    const raw = res.data?.lrc?.lyric || res.data?.yrc?.lyric || '';
+    return { raw, lines: parseLyrics(raw) };
+  } catch (e) {
+    console.error('Netease lyric failed:', id, e);
+    return { raw: '', lines: [] };
+  }
+}
+
 /** 并发验证多个候选，返回第一个能播放的 */
 export async function findPlayableSong(keyword: string): Promise<NeteaseSong | null> {
   const candidates = await searchSongs(keyword, 5);
@@ -67,4 +86,20 @@ export async function findPlayableSong(keyword: string): Promise<NeteaseSong | n
 
   // 全都没 URL，返回第一个（至少能显示）
   return candidates[0];
+}
+
+function parseLyrics(raw: string): LyricLine[] {
+  const lines: LyricLine[] = [];
+  for (const line of raw.split(/\r?\n/)) {
+    const matches = [...line.matchAll(/\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g)];
+    const text = line.replace(/\[[^\]]+\]/g, '').trim();
+    if (!matches.length || !text) continue;
+    for (const match of matches) {
+      const minutes = Number(match[1]);
+      const seconds = Number(match[2]);
+      const fraction = match[3] ? Number(match[3].padEnd(3, '0')) / 1000 : 0;
+      lines.push({ time: minutes * 60 + seconds + fraction, text });
+    }
+  }
+  return lines.sort((a, b) => a.time - b.time);
 }

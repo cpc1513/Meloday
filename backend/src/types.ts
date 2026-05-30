@@ -3,6 +3,7 @@ export interface Entry {
   date: string;
   content: string;
   emotions: string[];
+  is_favorite: number;
   created_at: string;
 }
 
@@ -21,7 +22,13 @@ export interface Song {
   album: string | null;
   cover_url: string | null;
   netease_id: number | null;
+  music_source: string | null;
+  source_id: string | null;
+  media_id: string | null;
   reason: string | null;
+  entry_id?: number;
+  entry_date?: string;
+  is_favorite?: number;
   created_at: string;
 }
 
@@ -31,4 +38,12 @@ export interface CalendarDay {
   emotions: string[] | null;
   song_cover: string | null;
   emotion_color: string | null;
+  emotion_keyword: string | null;
+  holiday: string | null;
+  is_favorite: boolean;
+}
+
+export interface LyricLine {
+  time: number;
+  text: string;
 }

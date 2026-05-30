@@ -1,9 +1,33 @@
 import { Router } from 'express';
 import { run, get, all } from '../db.js';
 import { analyzeEmotions, recommendPlaylist } from '../services/deepseek.js';
-import { findPlayableSong } from '../services/netease.js';
+import { findPlayableSong } from '../services/qqmusic.js';
 
 const router = Router();
+
+function parseEmotions(value: string | null | undefined): string[] {
+  try {
+    return JSON.parse(value || '[]');
+  } catch {
+    return [];
+  }
+}
+
+async function getPlaylistForEntry(entryId: number) {
+  const playlist = await get('SELECT * FROM playlists WHERE entry_id = ?', [entryId]);
+  const songs = playlist
+    ? await all(
+        `SELECT s.*, p.entry_id, e.date as entry_date, e.is_favorite
+         FROM songs s
+         JOIN playlists p ON s.playlist_id = p.id
+         JOIN entries e ON p.entry_id = e.id
+         WHERE s.playlist_id = ?
+         ORDER BY s.position`,
+        [(playlist as any).id]
+      )
+    : [];
+  return playlist ? { ...(playlist as any), songs } : null;
+}
 
 router.post('/', async (req, res) => {
   try {
@@ -42,15 +66,18 @@ router.post('/', async (req, res) => {
     // 并发搜索所有推荐歌曲，避免串行超时
     const songPromises = recommendations.map(async (rec, i) => {
       const keyword = `${rec.song} ${rec.artist}`;
-      const neteaseSong = await findPlayableSong(keyword);
-      if (!neteaseSong) return null;
+      const qqSong = await findPlayableSong(keyword);
+      if (!qqSong) return null;
       return {
         position: i + 1,
-        name: neteaseSong.name,
-        artist: neteaseSong.artist,
-        album: neteaseSong.album,
-        cover_url: neteaseSong.coverUrl,
-        netease_id: neteaseSong.id,
+        name: qqSong.name,
+        artist: qqSong.artist,
+        album: qqSong.album,
+        cover_url: qqSong.coverUrl,
+        netease_id: null,
+        music_source: 'qq',
+        source_id: qqSong.id,
+        media_id: qqSong.mediaId,
         reason: rec.reason,
       };
     });
@@ -70,13 +97,18 @@ router.post('/', async (req, res) => {
 
     for (const song of songs) {
       await run(
-        'INSERT INTO songs (playlist_id, position, name, artist, album, cover_url, netease_id, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [playlistId, song.position, song.name, song.artist, song.album, song.cover_url, song.netease_id, song.reason]
+        'INSERT INTO songs (playlist_id, position, name, artist, album, cover_url, netease_id, music_source, source_id, media_id, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [playlistId, song.position, song.name, song.artist, song.album, song.cover_url, song.netease_id, song.music_source, song.source_id, song.media_id, song.reason]
       );
     }
 
     const playlistRows = await all(
-      'SELECT * FROM songs WHERE playlist_id = ? ORDER BY position',
+      `SELECT s.*, p.entry_id, e.date as entry_date, e.is_favorite
+       FROM songs s
+       JOIN playlists p ON s.playlist_id = p.id
+       JOIN entries e ON p.entry_id = e.id
+       WHERE s.playlist_id = ?
+       ORDER BY s.position`,
       [playlistId]
     );
 
@@ -85,8 +117,10 @@ router.post('/', async (req, res) => {
       date,
       content,
       emotions,
+      is_favorite: 0,
       playlist: {
         id: playlistId,
+        entry_id: entryId,
         songs: playlistRows
       }
     });
@@ -104,14 +138,12 @@ router.get('/recent', async (_req, res) => {
     );
     const result = [];
     for (const entry of entries) {
-      const playlist = await get('SELECT * FROM playlists WHERE entry_id = ?', [entry.id]);
-      const songs = playlist
-        ? await all('SELECT * FROM songs WHERE playlist_id = ? ORDER BY position', [playlist.id])
-        : [];
+      const playlist = await getPlaylistForEntry(entry.id);
       result.push({
         ...entry,
-        emotions: JSON.parse(entry.emotions || '[]'),
-        playlist: playlist ? { ...playlist, songs } : null
+        is_favorite: Boolean(entry.is_favorite),
+        emotions: parseEmotions(entry.emotions),
+        playlist
       });
     }
     res.json(result);
@@ -126,16 +158,27 @@ router.get('/:date', async (req, res) => {
   const entry = await get('SELECT * FROM entries WHERE date = ?', [date]);
   if (!entry) return res.status(404).json({ error: 'Not found' });
 
-  const playlist = await get('SELECT * FROM playlists WHERE entry_id = ?', [entry.id]);
-  const songs = playlist
-    ? await all('SELECT * FROM songs WHERE playlist_id = ? ORDER BY position', [playlist.id])
-    : [];
+  const playlist = await getPlaylistForEntry((entry as any).id);
 
   res.json({
     ...entry,
-    emotions: JSON.parse(entry.emotions || '[]'),
-    playlist: playlist ? { ...playlist, songs } : null
+    is_favorite: Boolean((entry as any).is_favorite),
+    emotions: parseEmotions((entry as any).emotions),
+    playlist
   });
+});
+
+router.put('/:id/favorite', async (req, res) => {
+  try {
+    const entryId = Number(req.params.id);
+    const nextValue = req.body?.is_favorite ? 1 : 0;
+    const result = await run('UPDATE entries SET is_favorite = ? WHERE id = ?', [nextValue, entryId]);
+    if (!result.changes) return res.status(404).json({ error: 'Not found' });
+    res.json({ id: entryId, is_favorite: Boolean(nextValue) });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to update favorite' });
+  }
 });
 
 export default router;

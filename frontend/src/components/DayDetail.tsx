@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getEntry } from '../api/client';
+import { getEntry, setEntryFavorite } from '../api/client';
 import CoverImage from './CoverImage';
 import { getEmotionBg, getEmotionText } from '../utils/emotion';
 import type { Entry } from '../types';
@@ -14,6 +14,7 @@ export default function DayDetail({ date }: Props) {
     entry: null,
     error: false,
   });
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
 
   useEffect(() => {
     if (!date) return;
@@ -44,6 +45,17 @@ export default function DayDetail({ date }: Props) {
     );
   }
 
+  const toggleFavorite = async () => {
+    if (!state.entry) return;
+    setFavoriteBusy(true);
+    try {
+      const result = await setEntryFavorite(state.entry.id, !state.entry.is_favorite);
+      setState(prev => prev.entry ? { ...prev, entry: { ...prev.entry, is_favorite: result.is_favorite } } : prev);
+    } finally {
+      setFavoriteBusy(false);
+    }
+  };
+
   return (
     <section className="glass-panel" style={{ marginTop: 18, borderRadius: 18, padding: 22, animation: 'fadeIn 0.22s ease' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 18, marginBottom: 16 }}>
@@ -53,7 +65,10 @@ export default function DayDetail({ date }: Props) {
             {date.replace(/-/g, ' / ')}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+          <button disabled={favoriteBusy} onClick={toggleFavorite} className="ghost-button" style={{ minHeight: 30, padding: '0 10px' }}>
+            {state.entry.is_favorite ? '已收藏' : '收藏'}
+          </button>
             {state.entry.emotions.map(emotion => (
             <span
               key={emotion}

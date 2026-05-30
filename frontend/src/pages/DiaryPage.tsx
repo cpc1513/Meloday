@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import DiaryEditor from '../components/DiaryEditor';
 import PlaylistCard from '../components/PlaylistCard';
 import PageHeader from '../components/PageHeader';
-import LoadingOverlay from '../components/LoadingOverlay';
 import { useToast } from '../components/Toast';
 import { createEntry } from '../api/client';
 import { usePlayer } from '../hooks/usePlayer';
@@ -77,8 +76,6 @@ export default function DiaryPage() {
           <PlaylistCard songs={entry.playlist.songs} />
         </div>
       )}
-
-      <LoadingOverlay visible={isLoading} />
     </div>
   );
 }

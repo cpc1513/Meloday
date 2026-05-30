@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePlayer } from '../hooks/usePlayer';
 import { useAudio } from '../hooks/useAudio';
 import { getPlayUrl } from '../api/client';
@@ -8,16 +9,21 @@ import CoverImage from './CoverImage';
 export default function MiniPlayer() {
   const {
     currentSong, isPlaying, togglePlay, duration, progress, setTimeInfo,
-    next, prev, playlist, currentIndex, playAt,
+    next, prev, playlist, currentIndex, playAt, volume, setVolume,
   } = usePlayer();
-  const { play, pause, seek } = useAudio();
+  const { play, pause, seek, setVolume: setAudioVolume } = useAudio();
   const { showError } = useToast();
+  const navigate = useNavigate();
   const progressRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [isLoadingUrl, setIsLoadingUrl] = useState(false);
 
-  const canPlayCurrentSong = Boolean(currentSong?.netease_id);
+  const canPlayCurrentSong = Boolean(currentSong?.id);
   const currentSongName = currentSong?.name || '';
+
+  useEffect(() => {
+    setAudioVolume(volume);
+  }, [setAudioVolume, volume]);
 
   useEffect(() => {
     if (currentSong && !canPlayCurrentSong && isPlaying) {
@@ -33,10 +39,10 @@ export default function MiniPlayer() {
   }, [isPlaying, pause]);
 
   useEffect(() => {
-    if (!currentSong?.netease_id || !isPlaying) return;
+    if (!currentSong?.id || !isPlaying) return;
 
     let cancelled = false;
-    const songId = currentSong.netease_id;
+    const songId = currentSong.id;
 
     const loadAndPlay = async () => {
       setIsLoadingUrl(true);
@@ -78,7 +84,8 @@ export default function MiniPlayer() {
     };
   }, [
     currentSong?.id,
-    currentSong?.netease_id,
+    currentSong?.music_source,
+    currentSong?.source_id,
     currentSongName,
     isPlaying,
     next,
@@ -116,12 +123,13 @@ export default function MiniPlayer() {
         borderRadius: 18,
         padding: '10px 14px',
         display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) auto 150px',
+        gridTemplateColumns: 'minmax(0, 1fr) auto 160px auto',
         alignItems: 'center',
         gap: 14,
       }}>
         <button
-          onClick={() => setExpanded(true)}
+          onClick={() => navigate('/player')}
+          title="打开播放器"
           style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, textAlign: 'left' }}
         >
           <CoverImage song={currentSong} size={42} />
@@ -164,6 +172,25 @@ export default function MiniPlayer() {
           style={{ height: 5, background: 'var(--bg-hover)', borderRadius: 999, position: 'relative', cursor: 'pointer', overflow: 'hidden' }}
         >
           <div style={{ position: 'absolute', left: 0, top: 0, width: `${progress}%`, height: '100%', background: 'var(--accent)', borderRadius: 999 }} />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => setVolume(volume === 0 ? 0.8 : 0)} aria-label={volume === 0 ? '取消静音' : '静音'} className="icon-button" style={{ width: 32, height: 32 }}>
+            <VolumeIcon muted={volume === 0} />
+          </button>
+          <input
+            aria-label="音量"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={volume}
+            onChange={e => setVolume(Number(e.target.value))}
+            style={{ width: 82, accentColor: 'var(--accent)' }}
+          />
+          <button onClick={() => setExpanded(true)} aria-label="展开歌单" className="icon-button" style={{ width: 32, height: 32 }}>
+            <ListIcon />
+          </button>
         </div>
       </div>
 
@@ -237,4 +264,12 @@ function PlayIcon() {
 
 function PauseIcon() {
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7V5Zm6 0h4v14h-4V5Z" /></svg>;
+}
+
+function VolumeIcon({ muted }: { muted: boolean }) {
+  return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5Z" />{muted ? <path d="m19 9-4 6M15 9l4 6" /> : <path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8 8 0 0 1 0 12" />}</svg>;
+}
+
+function ListIcon() {
+  return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round"><path d="M8 6h13M8 12h13M8 18h13" /><path d="M3 6h.01M3 12h.01M3 18h.01" /></svg>;
 }

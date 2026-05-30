@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 const navItems = [
   { id: 'diary', label: '日记', path: '/', icon: DiaryIcon },
+  { id: 'player', label: '播放', path: '/player', icon: PlayerIcon },
   { id: 'calendar', label: '日历', path: '/calendar', icon: CalendarIcon },
   { id: 'history', label: '历史', path: '/history', icon: HistoryIcon },
   { id: 'settings', label: '设置', path: '/settings', icon: SettingsIcon },
@@ -85,6 +86,15 @@ function HistoryIcon() {
       <path d="M3 3v6h6" />
       <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
       <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+function PlayerIcon() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M10 8v8l6-4-6-4Z" />
     </svg>
   );
 }

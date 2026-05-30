@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -71,6 +71,15 @@ ipcMain.handle('window:is-maximized', () => {
 
 ipcMain.handle('window:close', () => {
   BrowserWindow.getFocusedWindow()?.close();
+});
+
+ipcMain.handle('app:open-data-directory', async () => {
+  const dataDir = path.join(app.getPath('userData'), 'data');
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+  await shell.openPath(dataDir);
+  return { ok: true, path: dataDir };
 });
 
 function startBackend() {

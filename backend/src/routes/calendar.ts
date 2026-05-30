@@ -16,6 +16,24 @@ const EMOTION_COLORS: Record<string, string> = {
   '感恩': '#E8E0D4'
 };
 
+const HOLIDAYS: Record<string, string> = {
+  '01-01': '元旦',
+  '02-14': '情人节',
+  '03-08': '妇女节',
+  '03-12': '植树节',
+  '04-01': '愚人节',
+  '05-01': '劳动节',
+  '05-04': '青年节',
+  '06-01': '儿童节',
+  '07-01': '建党节',
+  '08-01': '建军节',
+  '09-10': '教师节',
+  '10-01': '国庆节',
+  '10-31': '万圣夜',
+  '12-24': '平安夜',
+  '12-25': '圣诞节'
+};
+
 router.get('/', async (req, res) => {
   const { year, month } = req.query;
   if (!year || !month) {
@@ -38,14 +56,36 @@ router.get('/', async (req, res) => {
     [startDate, endDate]
   );
 
-  const days = (entries as any[]).map(entry => {
+  const entryMap = new Map<string, any>();
+  (entries as any[]).forEach(entry => entryMap.set(entry.date, entry));
+
+  const days = Array.from({ length: lastDay }, (_, index) => {
+    const day = index + 1;
+    const date = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const entry = entryMap.get(date);
+    const holiday = HOLIDAYS[`${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`] || null;
+    if (!entry) {
+      return {
+        date,
+        has_entry: false,
+        emotions: null,
+        song_cover: null,
+        emotion_color: null,
+        emotion_keyword: null,
+        holiday,
+        is_favorite: false
+      };
+    }
     const emotions = JSON.parse(entry.emotions || '[]');
     return {
       date: entry.date,
       has_entry: true,
       emotions,
       song_cover: entry.song_cover,
-      emotion_color: EMOTION_COLORS[emotions[0]] || '#F5F3F0'
+      emotion_color: EMOTION_COLORS[emotions[0]] || '#F5F3F0',
+      emotion_keyword: emotions[0] || null,
+      holiday,
+      is_favorite: Boolean(entry.is_favorite)
     };
   });
 
