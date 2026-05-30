@@ -16,7 +16,7 @@ router.get('/status', (_req, res) => {
     music_source: 'qq',
     music_source_label: 'QQ 音乐',
     music_source_mode: '免 cookie，受版权限制歌曲会自动跳过',
-    version: '1.0.0'
+    version: '1.0.1'
   });
 });
 
