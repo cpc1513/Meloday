@@ -67,8 +67,7 @@ export function initDb(): Promise<void> {
         artist TEXT NOT NULL,
         album TEXT,
         cover_url TEXT,
-        netease_id INTEGER,
-        music_source TEXT DEFAULT 'netease',
+        music_source TEXT DEFAULT 'qq',
         source_id TEXT,
         media_id TEXT,
         reason TEXT,
@@ -85,7 +84,7 @@ export function initDb(): Promise<void> {
       );
 
       CREATE TABLE IF NOT EXISTS lyrics_cache (
-        netease_id TEXT PRIMARY KEY,
+        source_id TEXT PRIMARY KEY,
         raw_lyrics TEXT,
         parsed_lyrics TEXT,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -99,10 +98,24 @@ export function initDb(): Promise<void> {
       if (err) reject(err);
       else {
         db.run('ALTER TABLE entries ADD COLUMN is_favorite INTEGER DEFAULT 0', () => {
-          db.run("ALTER TABLE songs ADD COLUMN music_source TEXT DEFAULT 'netease'", () => {
+          db.run("ALTER TABLE songs ADD COLUMN music_source TEXT DEFAULT 'qq'", () => {
             db.run('ALTER TABLE songs ADD COLUMN source_id TEXT', () => {
               db.run('ALTER TABLE songs ADD COLUMN media_id TEXT', () => {
-                resolve();
+                db.all("PRAGMA table_info('lyrics_cache')", (_infoErr, rows: any[]) => {
+                  const hasSourceId = rows?.some(row => row.name === 'source_id');
+                  if (hasSourceId) return resolve();
+                  db.serialize(() => {
+                    db.run('DROP TABLE IF EXISTS lyrics_cache');
+                    db.run(`
+                      CREATE TABLE lyrics_cache (
+                        source_id TEXT PRIMARY KEY,
+                        raw_lyrics TEXT,
+                        parsed_lyrics TEXT,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                      )
+                    `, () => resolve());
+                  });
+                });
               });
             });
           });

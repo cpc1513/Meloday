@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getEntry, setEntryFavorite } from '../api/client';
 import CoverImage from './CoverImage';
-import { getEmotionBg, getEmotionText } from '../utils/emotion';
+import { getEmotionBg, getEmotionBorder, getEmotionText } from '../utils/emotion';
+import { usePlayer } from '../hooks/usePlayer';
 import type { Entry } from '../types';
 
 interface Props {
@@ -9,6 +11,8 @@ interface Props {
 }
 
 export default function DayDetail({ date }: Props) {
+  const navigate = useNavigate();
+  const { setPlaylist, playAt } = usePlayer();
   const [state, setState] = useState<{ date: string; entry: Entry | null; error: boolean }>({
     date: '',
     entry: null,
@@ -29,22 +33,6 @@ export default function DayDetail({ date }: Props) {
     return () => { cancelled = true; };
   }, [date]);
 
-  if (state.date !== date) {
-    return (
-      <div className="glass-panel" style={{ marginTop: 18, borderRadius: 18, padding: 24, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 650 }}>
-        加载中...
-      </div>
-    );
-  }
-
-  if (state.error || !state.entry || !state.entry.playlist) {
-    return (
-      <div className="glass-panel" style={{ marginTop: 18, borderRadius: 18, padding: 28, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 14, fontWeight: 650 }}>
-        这一天还没有写日记
-      </div>
-    );
-  }
-
   const toggleFavorite = async () => {
     if (!state.entry) return;
     setFavoriteBusy(true);
@@ -56,67 +44,78 @@ export default function DayDetail({ date }: Props) {
     }
   };
 
+  const openSongInPlayer = (index: number) => {
+    if (!state.entry?.playlist?.songs) return;
+    setPlaylist(state.entry.playlist.songs);
+    playAt(index);
+    navigate('/player');
+  };
+
+  if (state.date !== date) {
+    return (
+      <aside className="glass-panel day-detail-panel day-detail-empty">
+        <div className="day-detail-kicker">DAY DETAIL</div>
+        <div className="day-detail-date">{date.replace(/-/g, ' / ')}</div>
+        <p>加载中...</p>
+      </aside>
+    );
+  }
+
+  if (state.error || !state.entry || !state.entry.playlist) {
+    return (
+      <aside className="glass-panel day-detail-panel day-detail-empty">
+        <div className="day-detail-kicker">DAY DETAIL</div>
+        <div className="day-detail-date">{date.replace(/-/g, ' / ')}</div>
+        <p>这一天还没有写日记。</p>
+      </aside>
+    );
+  }
+
   return (
-    <section className="glass-panel" style={{ marginTop: 18, borderRadius: 18, padding: 22, animation: 'fadeIn 0.22s ease' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 18, marginBottom: 16 }}>
+    <aside className="glass-panel day-detail-panel">
+      <div className="day-detail-head">
         <div>
-          <div style={{ color: 'var(--text-tertiary)', fontSize: 12, fontWeight: 760, marginBottom: 5 }}>DAY DETAIL</div>
-          <div style={{ fontSize: 20, fontWeight: 760, color: 'var(--text-primary)' }}>
-            {date.replace(/-/g, ' / ')}
-          </div>
+          <div className="day-detail-kicker">DAY DETAIL</div>
+          <div className="day-detail-date">{date.replace(/-/g, ' / ')}</div>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
-          <button disabled={favoriteBusy} onClick={toggleFavorite} className="ghost-button" style={{ minHeight: 30, padding: '0 10px' }}>
-            {state.entry.is_favorite ? '已收藏' : '收藏'}
-          </button>
-            {state.entry.emotions.map(emotion => (
-            <span
-              key={emotion}
-              style={{
-                padding: '5px 11px',
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: 700,
-                background: getEmotionBg(emotion),
-                color: getEmotionText(emotion),
-              }}
-            >
-              {emotion}
-            </span>
-          ))}
-        </div>
+        <button disabled={favoriteBusy} onClick={toggleFavorite} className="ghost-button">
+          {state.entry.is_favorite ? '已收藏' : '收藏'}
+        </button>
       </div>
 
-      <div style={{
-        background: 'var(--bg-input)',
-        borderRadius: 16,
-        padding: 18,
-        marginBottom: 18,
-        fontSize: 15,
-        lineHeight: 1.8,
-        color: 'var(--text-primary)',
-      }}>
+      <div className="day-detail-emotions">
+        {state.entry.emotions.map(emotion => (
+          <span
+            key={emotion}
+            style={{
+              background: getEmotionBg(emotion),
+              color: getEmotionText(emotion),
+              borderColor: getEmotionBorder(emotion),
+            }}
+          >
+            {emotion}
+          </span>
+        ))}
+      </div>
+
+      <div className="day-detail-diary">
         {state.entry.content}
       </div>
 
-      <div>
-        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, fontWeight: 760 }}>
-          当日歌单
-        </div>
-        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
-          {state.entry.playlist.songs.map(song => (
-            <div key={song.id} style={{ flexShrink: 0, width: 124 }}>
-              <CoverImage song={song} size={124} />
-              <div style={{ marginTop: 9, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {song.name}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {song.artist || 'Unknown'}
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="day-detail-playlist-title">
+        当日歌单 · {state.entry.playlist.songs.length} 首
       </div>
-    </section>
+      <div className="day-detail-playlist">
+        {state.entry.playlist.songs.map((song, index) => (
+          <button key={song.id} className="day-detail-song" onClick={() => openSongInPlayer(index)}>
+            <CoverImage song={song} size={58} />
+            <div>
+              <div className="day-detail-song-name">{song.name}</div>
+              <div className="day-detail-song-artist">{song.artist || 'Unknown'}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </aside>
   );
 }

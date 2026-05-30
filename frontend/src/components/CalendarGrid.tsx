@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getCalendar } from '../api/client';
+import { getEmotionBg, getEmotionBorder, getEmotionText } from '../utils/emotion';
 import type { CalendarDay } from '../types';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
@@ -47,21 +48,18 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
     for (let i = startWeekday - 1; i >= 0; i--) {
       const d = prevMonthLastDay - i;
       const dateStr = formatDate(new Date(year, month - 2, d));
-      const entry = entryDays[dateStr];
-      result.push(toCell(dateStr, d, false, entry));
+      result.push(toCell(dateStr, d, false, entryDays[dateStr]));
     }
 
     for (let d = 1; d <= totalDays; d++) {
       const dateStr = formatDate(new Date(year, month - 1, d));
-      const entry = entryDays[dateStr];
-      result.push(toCell(dateStr, d, true, entry));
+      result.push(toCell(dateStr, d, true, entryDays[dateStr]));
     }
 
     const remaining = (7 - (result.length % 7)) % 7;
     for (let d = 1; d <= remaining; d++) {
       const dateStr = formatDate(new Date(year, month, d));
-      const entry = entryDays[dateStr];
-      result.push(toCell(dateStr, d, false, entry));
+      result.push(toCell(dateStr, d, false, entryDays[dateStr]));
     }
 
     return result;
@@ -81,6 +79,7 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
     const next = new Date();
     setYear(next.getFullYear());
     setMonth(next.getMonth() + 1);
+    handleClick(toCell(formatDate(next), next.getDate(), true, entryDays[formatDate(next)]));
   };
 
   const handleClick = (cell: CalendarCell) => {
@@ -97,89 +96,76 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
   };
 
   return (
-    <section className="glass-panel" style={{ borderRadius: 18, padding: 22 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, marginBottom: 22 }}>
+    <section className="glass-panel calendar-panel">
+      <div className="calendar-header">
         <div>
-          <div style={{ color: 'var(--text-tertiary)', fontSize: 12, fontWeight: 760, marginBottom: 4 }}>MONTH VIEW</div>
-          <h2 style={{ margin: 0, fontSize: 24, lineHeight: 1.2, fontWeight: 760, color: 'var(--text-primary)' }}>
-            {year} 年 {month} 月
-          </h2>
+          <div className="calendar-kicker">MONTH VIEW</div>
+          <h2 className="calendar-title">{year} 年 {month} 月</h2>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="calendar-actions">
           <button onClick={goPrev} aria-label="上个月" className="icon-button"><ChevronLeft /></button>
           <button onClick={goNext} aria-label="下个月" className="icon-button"><ChevronRight /></button>
           <button onClick={goToday} className="ghost-button">今天</button>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8, marginBottom: 10, textAlign: 'center' }}>
+      <div className="calendar-weekdays">
         {WEEKDAYS.map(d => (
-          <div key={d} style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 760 }}>{d}</div>
+          <div key={d}>{d}</div>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(64px, 1fr))', gap: 8 }}>
+      <div className="calendar-cells">
         {cells.map(cell => {
           const isSelected = selectedDate === cell.date;
           const isToday = cell.date === formatDate(new Date());
+          const emotion = cell.emotionKeyword || cell.emotions?.[0] || '';
           return (
             <button
               key={cell.date}
               onClick={() => handleClick(cell)}
+              className="calendar-cell"
               style={{
-                aspectRatio: '1 / 0.9',
-                minHeight: 68,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                cursor: cell.isCurrentMonth ? 'pointer' : 'default',
-                opacity: cell.isCurrentMonth ? 1 : 0.38,
-                borderRadius: 14,
-                padding: 10,
-                background: isSelected ? 'var(--accent-dark)' : isToday ? 'var(--bg-hover)' : 'rgba(255,255,255,0.44)',
-                color: isSelected ? '#fff' : 'var(--text-primary)',
-                border: `1px solid ${isSelected ? 'var(--accent-dark)' : 'var(--border-light)'}`,
-                transition: 'transform 0.16s ease, background 0.16s ease',
-                textAlign: 'left',
+                opacity: cell.isCurrentMonth ? 1 : 0.36,
+                background: isSelected ? '#E7E1CF' : isToday ? 'var(--bg-hover)' : 'rgba(255,255,255,0.52)',
+                color: 'var(--text-primary)',
+                borderColor: isSelected ? '#D5C9A9' : 'var(--border-light)',
+                boxShadow: isSelected ? '0 14px 28px rgba(111, 98, 66, 0.12)' : 'none',
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 760 }}>
-                {cell.dayOfMonth}
+              <span className="calendar-cell-day">{cell.dayOfMonth}</span>
+
+              <span className="calendar-cell-tags">
+                {cell.holiday && (
+                  <span className="calendar-cell-tag calendar-holiday-tag">
+                    {cell.holiday}
+                  </span>
+                )}
+                {emotion && (
+                  <span
+                    className="calendar-cell-tag"
+                    style={{
+                      color: isSelected ? '#6F6242' : getEmotionText(emotion),
+                      background: isSelected ? 'rgba(255,255,255,0.5)' : getEmotionBg(emotion),
+                      borderColor: isSelected ? 'rgba(111,98,66,0.18)' : getEmotionBorder(emotion),
+                    }}
+                  >
+                    {emotion}
+                  </span>
+                )}
               </span>
-              {(cell.holiday || cell.emotionKeyword) && (
-                <span style={{
-                  maxWidth: '100%',
-                  fontSize: 10,
-                  lineHeight: 1.15,
-                  fontWeight: 760,
-                  color: isSelected ? 'rgba(255,255,255,0.78)' : 'var(--text-tertiary)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {cell.emotionKeyword || cell.holiday}
-                </span>
-              )}
+
               {cell.hasEntry ? (
-                <span style={{
-                  alignSelf: 'flex-end',
-                  width: 30,
-                  height: 30,
-                  borderRadius: 10,
-                  background: cell.songCover ? `url(${cell.songCover}) center/cover` : cell.emotionColor || 'var(--accent-soft)',
-                  border: '1px solid rgba(255,255,255,0.72)',
-                  boxShadow: '0 8px 16px rgba(37,35,31,0.10)',
-                  position: 'relative',
-                }} />
+                <span
+                  className="calendar-cover"
+                  style={{
+                    background: cell.songCover
+                      ? `url(${cell.songCover}) center/cover`
+                      : cell.emotionColor || getEmotionBg(emotion),
+                  }}
+                />
               ) : (
-                <span style={{
-                  alignSelf: 'flex-end',
-                  width: 7,
-                  height: 7,
-                  borderRadius: '50%',
-                  background: isToday ? 'var(--accent)' : 'transparent',
-                }} />
+                <span className="calendar-empty-dot" style={{ background: isToday ? 'var(--accent)' : 'transparent' }} />
               )}
             </button>
           );
@@ -194,7 +180,7 @@ function toCell(date: string, dayOfMonth: number, isCurrentMonth: boolean, entry
     date,
     dayOfMonth,
     isCurrentMonth,
-    hasEntry: !!entry,
+    hasEntry: !!entry?.has_entry,
     emotions: entry?.emotions || null,
     songCover: entry?.song_cover || null,
     emotionColor: entry?.emotion_color || null,

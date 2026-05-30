@@ -21,7 +21,6 @@ export interface Song {
   artist: string;
   album: string | null;
   cover_url: string | null;
-  netease_id: number | null;
   music_source: string | null;
   source_id: string | null;
   media_id: string | null;

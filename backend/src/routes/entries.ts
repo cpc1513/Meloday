@@ -79,7 +79,6 @@ router.post('/', async (req, res) => {
         artist: qqSong.artist,
         album: qqSong.album,
         cover_url: qqSong.coverUrl,
-        netease_id: null,
         music_source: 'qq',
         source_id: qqSong.id,
         media_id: qqSong.mediaId,
@@ -105,8 +104,8 @@ router.post('/', async (req, res) => {
 
     for (const song of songs) {
       await run(
-        'INSERT INTO songs (playlist_id, position, name, artist, album, cover_url, netease_id, music_source, source_id, media_id, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [playlistId, song.position, song.name, song.artist, song.album, song.cover_url, song.netease_id, song.music_source, song.source_id, song.media_id, song.reason]
+        'INSERT INTO songs (playlist_id, position, name, artist, album, cover_url, music_source, source_id, media_id, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [playlistId, song.position, song.name, song.artist, song.album, song.cover_url, song.music_source, song.source_id, song.media_id, song.reason]
       );
     }
 

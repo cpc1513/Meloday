@@ -196,7 +196,7 @@ npx electron-builder
 | `GET` | `/api/entries/recent` | 获取最近日记 |
 | `GET` | `/api/entries/:date` | 按日期读取日记 |
 | `GET` | `/api/calendar?year=2026&month=5` | 获取日历数据 |
-| `GET` | `/api/songs/:neteaseId/play-url` | 获取歌曲播放链接 |
+| `GET` | `/api/songs/:songId/play-url` | 获取歌曲播放链接 |
 
 ## 项目结构
 

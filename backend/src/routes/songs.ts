@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { all, get, run } from '../db.js';
-import { getLyrics as getNeteaseLyrics, getPlayUrl as getNeteasePlayUrl } from '../services/netease.js';
 import { getLyrics as getQQLyrics, getPlayUrl as getQQPlayUrl } from '../services/qqmusic.js';
 
 const router = Router();
@@ -19,16 +18,15 @@ router.get('/:songId/play-url', async (req, res) => {
   try {
     const song = await get<any>('SELECT * FROM songs WHERE id = ?', [Number(req.params.songId)]);
     if (!song) return res.status(404).json({ error: 'Song not found' });
+    if (song.music_source !== 'qq' || !song.source_id) {
+      return res.status(404).json({ error: 'QQ play url not found' });
+    }
 
-    const url = song.music_source === 'qq' && song.source_id
-      ? await getQQPlayUrl(song.source_id, song.media_id)
-      : song.netease_id
-        ? await getNeteasePlayUrl(Number(song.netease_id))
-        : null;
+    const url = await getQQPlayUrl(song.source_id, song.media_id);
     if (!url) {
       return res.status(404).json({ error: 'Play url not found' });
     }
-    res.json({ url, expires_in: 300, source: song.music_source || 'netease' });
+    res.json({ url, expires_in: 300, source: 'qq' });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to get play url' });
@@ -44,14 +42,14 @@ router.get('/:songId/lyrics', async (req, res) => {
     const song = await get<any>('SELECT * FROM songs WHERE id = ?', [songId]);
     if (!song) return res.status(404).json({ error: 'Song not found' });
 
-    const lyricSourceId = song.music_source === 'qq' ? song.source_id : song.netease_id ? String(song.netease_id) : '';
-    const cacheKey = songId;
+    const lyricSourceId = song.music_source === 'qq' ? song.source_id : '';
+    const cacheKey = `qq:${songId}`;
     if (!lyricSourceId) {
       return res.json({ song_id: songId, lines: [], raw: '', message: '暂无可用歌词' });
     }
 
     const cached = await get<{ raw_lyrics: string; parsed_lyrics: string }>(
-      'SELECT raw_lyrics, parsed_lyrics FROM lyrics_cache WHERE netease_id = ?',
+      'SELECT raw_lyrics, parsed_lyrics FROM lyrics_cache WHERE source_id = ?',
       [cacheKey]
     );
     if (cached) {
@@ -63,11 +61,9 @@ router.get('/:songId/lyrics', async (req, res) => {
       });
     }
 
-    const lyrics = song.music_source === 'qq'
-      ? await getQQLyrics(song.source_id)
-      : await getNeteaseLyrics(Number(song.netease_id));
+    const lyrics = await getQQLyrics(song.source_id);
     await run(
-      'INSERT OR REPLACE INTO lyrics_cache (netease_id, raw_lyrics, parsed_lyrics, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
+      'INSERT OR REPLACE INTO lyrics_cache (source_id, raw_lyrics, parsed_lyrics, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
       [cacheKey, lyrics.raw, JSON.stringify(lyrics.lines)]
     );
 
@@ -75,7 +71,7 @@ router.get('/:songId/lyrics', async (req, res) => {
       song_id: songId,
       lines: lyrics.lines,
       raw: lyrics.raw,
-      source: song.music_source || 'netease',
+      source: 'qq',
       message: lyrics.lines.length ? null : '暂无可用歌词'
     });
   } catch (e) {

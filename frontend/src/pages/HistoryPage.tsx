@@ -3,7 +3,7 @@ import { getRecentEntries, setEntryFavorite } from '../api/client';
 import { usePlayer } from '../hooks/usePlayer';
 import PageHeader from '../components/PageHeader';
 import CoverImage from '../components/CoverImage';
-import { getEmotionBg, getEmotionText } from '../utils/emotion';
+import { getEmotionBg, getEmotionBorder, getEmotionText } from '../utils/emotion';
 import type { Entry, Song } from '../types';
 
 export default function HistoryPage() {
@@ -64,7 +64,7 @@ export default function HistoryPage() {
         <div className="glass-panel" style={{ borderRadius: 18, textAlign: 'center', padding: '64px 24px', color: 'var(--text-secondary)' }}>
           <div style={{ fontSize: 42, marginBottom: 12 }}>♪</div>
           <div style={{ fontSize: 17, fontWeight: 760, marginBottom: 6, color: 'var(--text-primary)' }}>还没有日记</div>
-          <div style={{ fontSize: 13 }}>写下第一篇日记，让 Meloday 为它配一首歌。</div>
+          <div style={{ fontSize: 13 }}>写下第一篇日记，让 Meloday 为它配一张歌单。</div>
         </div>
       ) : filteredEntries.length === 0 ? (
         <div className="glass-panel" style={{ borderRadius: 18, textAlign: 'center', padding: '48px 24px', color: 'var(--text-secondary)' }}>
@@ -122,6 +122,7 @@ export default function HistoryPage() {
                             fontWeight: 700,
                             background: getEmotionBg(emotion),
                             color: getEmotionText(emotion),
+                            border: `1px solid ${getEmotionBorder(emotion)}`,
                           }}
                         >
                           {emotion}
@@ -147,24 +148,26 @@ export default function HistoryPage() {
 
                     {entry.playlist?.songs && entry.playlist.songs.length > 0 && (
                       <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
                           <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 760 }}>
                             当日歌单 · {entry.playlist.songs.length} 首
                           </div>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handlePlay(entry.playlist!.songs); }}
-                            className="primary-button"
-                            style={{ minHeight: 34, borderRadius: 10, padding: '0 13px' }}
-                          >
-                            播放全部
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleFavorite(entry); }}
-                            className="ghost-button"
-                            style={{ minHeight: 34, borderRadius: 10, padding: '0 13px' }}
-                          >
-                            {entry.is_favorite ? '取消收藏' : '收藏这一天'}
-                          </button>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handlePlay(entry.playlist!.songs); }}
+                              className="primary-button"
+                              style={{ minHeight: 34, borderRadius: 10, padding: '0 13px' }}
+                            >
+                              播放全部
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleFavorite(entry); }}
+                              className="ghost-button"
+                              style={{ minHeight: 34, borderRadius: 10, padding: '0 13px' }}
+                            >
+                              {entry.is_favorite ? '取消收藏' : '收藏这一天'}
+                            </button>
+                          </div>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {entry.playlist.songs.map((song, idx) => (
@@ -189,12 +192,9 @@ export default function HistoryPage() {
                                 <div style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {song.name}
                                 </div>
-                                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                                <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {song.artist || 'Unknown'}
                                 </div>
-                              </div>
-                              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {song.reason}
                               </div>
                             </button>
                           ))}

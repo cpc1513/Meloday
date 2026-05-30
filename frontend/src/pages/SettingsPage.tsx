@@ -3,6 +3,8 @@ import PageHeader from '../components/PageHeader';
 import { clearRuntimeCache, getRecentEntries, getSettingsStatus, setApiKey } from '../api/client';
 import type { SettingsStatus } from '../types';
 
+const GITHUB_REPO_URL = 'https://github.com/cpc1513/Meloday';
+
 export default function SettingsPage() {
   const [apiStatus, setApiStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   const [settings, setSettings] = useState<SettingsStatus | null>(null);
@@ -73,6 +75,7 @@ export default function SettingsPage() {
 
   const generationLeft = settings ? Math.max(0, settings.generation_limit - settings.generation_count) : 0;
   const quotaExhausted = settings ? generationLeft === 0 && !settings.has_user_key : false;
+  const quotaLabel = `剩余生成次数 ${generationLeft} / ${settings?.generation_limit ?? 365}`;
 
   return (
     <div className="page page-narrow">
@@ -106,15 +109,20 @@ export default function SettingsPage() {
         <SettingCard
           title="DeepSeek 配置"
           desc={settings?.has_user_key
-            ? '正在使用你自己的 DeepSeek API Key'
+            ? `正在使用你自己的 DeepSeek API Key，${quotaLabel}`
             : quotaExhausted
               ? '免费生成次数已用完，请填写你自己的 DeepSeek API Key'
-              : `免费生成剩余 ${generationLeft} / ${settings?.generation_limit ?? 365} 次`}
+              : quotaLabel}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
             <div style={{ fontSize: 13, color: settings?.has_user_key ? 'var(--accent-green)' : quotaExhausted ? '#B0544A' : 'var(--accent-green)', fontWeight: 760 }}>
-              {settings?.has_user_key ? '自有 Key' : quotaExhausted ? '已用完' : '免费额度'}
+              {settings?.has_user_key ? '自有 Key' : quotaExhausted ? '已用完' : quotaLabel}
             </div>
+            {settings?.has_user_key && (
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 700 }}>
+                {quotaLabel}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 6 }}>
               <input
                 type="password"
@@ -125,7 +133,7 @@ export default function SettingsPage() {
                   fontSize: 12,
                   padding: '6px 10px',
                   borderRadius: 8,
-                  border: '1px solid var(--border-color)',
+                  border: '1px solid var(--border)',
                   background: 'var(--bg-input)',
                   color: 'var(--text-primary)',
                   width: 240,
@@ -144,12 +152,6 @@ export default function SettingsPage() {
           </div>
         </SettingCard>
 
-        <SettingCard title="音乐源" desc={settings?.music_source_mode || '当前生成歌单使用 QQ 音乐源'}>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 760 }}>
-            {settings?.music_source_label || 'QQ 音乐'}
-          </div>
-        </SettingCard>
-
         <SettingCard title="数据目录" desc={settings?.database_path || '当前环境暂未返回数据库路径'}>
           <button onClick={handleOpenDataDir} className="ghost-button" style={{ minHeight: 34 }}>
             打开目录
@@ -163,7 +165,12 @@ export default function SettingsPage() {
         </SettingCard>
 
         <SettingCard title="关于" desc="Meloday 音乐日记">
-          <div style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 700 }}>版本 {settings?.version || '1.0.2'}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end', fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 700 }}>
+            <span>版本 {settings?.version || '1.0.2'}</span>
+            <a href={GITHUB_REPO_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)' }}>
+              GitHub 仓库
+            </a>
+          </div>
         </SettingCard>
 
         <SettingCard title="外部音乐软件连接" desc="后续版本会探索与本地播放器或外部音乐服务连接">
