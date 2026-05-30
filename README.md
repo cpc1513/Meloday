@@ -12,7 +12,7 @@ Meloday（日聆）是一款面向 Windows 的 AI 音乐日记应用。它把“
 
 ### 写下今天，生成今日音乐
 
-![Meloday diary screen](docs/screenshots/diary.png)
+![Meloday diary screen](docs/screenshots/dairy.png)
 
 ### 在播放器中预览歌词，歌单，收藏今天
 
