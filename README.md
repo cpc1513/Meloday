@@ -14,6 +14,10 @@ Meloday（日聆）是一款面向 Windows 的 AI 音乐日记应用。它把“
 
 ![Meloday diary screen](docs/screenshots/diary.png)
 
+### 在播放器中预览歌词，歌单，收藏今天
+
+![Meloday diary screen](docs/screenshots/player.png)
+
 ### 用日历回看每天的情绪和音乐
 
 ![Meloday calendar screen](docs/screenshots/calendar.png)
@@ -22,9 +26,6 @@ Meloday（日聆）是一款面向 Windows 的 AI 音乐日记应用。它把“
 
 ![Meloday history screen](docs/screenshots/history.png)
 
-### 管理服务状态和本地数据
-
-![Meloday settings screen](docs/screenshots/settings.png)
 
 ## Meloday 能做什么
 
