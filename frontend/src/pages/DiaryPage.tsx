@@ -41,8 +41,8 @@ export default function DiaryPage() {
         playAt(0);
       }
     } catch (e: unknown) {
-      const error = e as { response?: { data?: { error?: string } } };
-      const msg = error.response?.data?.error || '生成失败，请稍后再试';
+      const error = e as { response?: { data?: { message?: string; error?: string } }; message?: string };
+      const msg = error.response?.data?.message || error.message || '生成失败，请稍后再试';
       showError(msg);
     } finally {
       setIsLoading(false);

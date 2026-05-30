@@ -9,15 +9,20 @@ const router = Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const databasePath = process.env.DATABASE_PATH || path.join(__dirname, '..', '..', '..', 'data', 'meloday.db');
 
-router.get('/status', (_req, res) => {
+router.get('/status', async (_req, res) => {
+  const generationInfo = await getGenerationInfo();
+
   res.json({
     status: 'ok',
-    deepseek_configured: Boolean(process.env.DEEPSEEK_API_KEY),
+    deepseek_configured: generationInfo.hasProxyToken || generationInfo.hasUserKey,
+    generation_count: generationInfo.generationCount,
+    generation_limit: generationInfo.generationLimit,
+    has_user_key: generationInfo.hasUserKey,
     database_path: databasePath,
     music_source: 'qq',
     music_source_label: 'QQ 音乐',
     music_source_mode: '免 cookie，受版权限制歌曲会自动跳过',
-    version: '1.0.1'
+    version: '1.0.2',
   });
 });
 

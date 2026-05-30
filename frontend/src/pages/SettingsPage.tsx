@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import PageHeader from '../components/PageHeader';
 import { clearRuntimeCache, getRecentEntries, getSettingsStatus, setApiKey } from '../api/client';
 import type { SettingsStatus } from '../types';
@@ -9,20 +9,6 @@ export default function SettingsPage() {
   const [message, setMessage] = useState('');
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [savingKey, setSavingKey] = useState(false);
-
-  const handleExport = () => {
-    getRecentEntries()
-      .then(data => {
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `meloday-backup-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        setMessage('备份已导出');
-      });
-  };
 
   const loadStatus = useCallback((showChecking: boolean) => {
     if (showChecking) setApiStatus('checking');
@@ -42,8 +28,18 @@ export default function SettingsPage() {
     return () => window.clearTimeout(timer);
   }, [loadStatus]);
 
-  const handleCheckApi = () => {
-    loadStatus(true);
+  const handleExport = () => {
+    getRecentEntries()
+      .then(data => {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `meloday-backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setMessage('备份已导出');
+      });
   };
 
   const handleSaveApiKey = async () => {
@@ -89,7 +85,7 @@ export default function SettingsPage() {
           </button>
         </SettingCard>
 
-        <SettingCard title="服务状态" desc="检查后端服务是否正常运行">
+        <SettingCard title="服务状态" desc="检查本地后端服务是否正常运行">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{
               width: 9,
@@ -101,7 +97,7 @@ export default function SettingsPage() {
             <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 650 }}>
               {apiStatus === 'ok' ? '运行正常' : apiStatus === 'error' ? '连接失败' : '检测中...'}
             </span>
-            <button onClick={handleCheckApi} className="ghost-button" style={{ minHeight: 30, padding: '0 11px' }}>
+            <button onClick={() => loadStatus(true)} className="ghost-button" style={{ minHeight: 30, padding: '0 11px' }}>
               刷新
             </button>
           </div>
@@ -110,14 +106,14 @@ export default function SettingsPage() {
         <SettingCard
           title="DeepSeek 配置"
           desc={settings?.has_user_key
-            ? '正在使用你自己的 API Key'
+            ? '正在使用你自己的 DeepSeek API Key'
             : quotaExhausted
-              ? '免费次数已用完，请填入你的 API Key'
-              : `免费生成剩余 ${generationLeft} / ${settings?.generation_limit ?? 100} 次`}
+              ? '免费生成次数已用完，请填写你自己的 DeepSeek API Key'
+              : `免费生成剩余 ${generationLeft} / ${settings?.generation_limit ?? 365} 次`}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
             <div style={{ fontSize: 13, color: settings?.has_user_key ? 'var(--accent-green)' : quotaExhausted ? '#B0544A' : 'var(--accent-green)', fontWeight: 760 }}>
-              {settings?.has_user_key ? '自有 Key' : quotaExhausted ? '已用完' : '共享 Key'}
+              {settings?.has_user_key ? '自有 Key' : quotaExhausted ? '已用完' : '免费额度'}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               <input
@@ -148,7 +144,7 @@ export default function SettingsPage() {
           </div>
         </SettingCard>
 
-        <SettingCard title="音乐源" desc={settings?.music_source_mode || '当前生成歌单使用 QQ 音乐源。'}>
+        <SettingCard title="音乐源" desc={settings?.music_source_mode || '当前生成歌单使用 QQ 音乐源'}>
           <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 760 }}>
             {settings?.music_source_label || 'QQ 音乐'}
           </div>
@@ -160,17 +156,17 @@ export default function SettingsPage() {
           </button>
         </SettingCard>
 
-        <SettingCard title="运行缓存" desc="清理在线歌词缓存。封面来自网易云 CDN，不会删除你的日记和歌单。">
+        <SettingCard title="运行缓存" desc="清理在线歌词缓存，不会删除你的日记和歌单">
           <button onClick={handleClearCache} className="ghost-button" style={{ minHeight: 34 }}>
             清理缓存
           </button>
         </SettingCard>
 
         <SettingCard title="关于" desc="Meloday 音乐日记">
-          <div style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 700 }}>版本 {settings?.version || '1.0.0'}</div>
+          <div style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 700 }}>版本 {settings?.version || '1.0.2'}</div>
         </SettingCard>
 
-        <SettingCard title="外部音乐组件" desc="后续版本会让用户选择网易云、QQ 音乐或其他本地播放器进行连接。">
+        <SettingCard title="外部音乐软件连接" desc="后续版本会探索与本地播放器或外部音乐服务连接">
           <div style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 700 }}>规划中</div>
         </SettingCard>
 

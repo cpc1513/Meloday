@@ -32,7 +32,7 @@
         "to": "backend",
         "filter": [
           "dist/**/*",
-          ".env",
+          "proxy-token.txt",
           "package.json"
         ]
       },

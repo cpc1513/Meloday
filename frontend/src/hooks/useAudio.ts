@@ -1,12 +1,10 @@
 import { useRef, useCallback } from 'react';
 
-// 模块级单例，确保全应用只有一个 Audio 实例
 let globalAudio: HTMLAudioElement | null = null;
 
 function getGlobalAudio(): HTMLAudioElement {
   if (!globalAudio) {
     globalAudio = new Audio();
-    // 允许跨域音频加载（CORS）
     globalAudio.crossOrigin = 'anonymous';
     globalAudio.preload = 'auto';
   }
@@ -27,52 +25,87 @@ export function useAudio() {
     return audio;
   }, []);
 
-  /** 播放指定 URL，返回 Promise，失败时 reject */
-  const play = useCallback((url: string): Promise<HTMLAudioElement> => {
+  const play = useCallback((url: string, timeoutMs = 15000): Promise<HTMLAudioElement> => {
     const audio = getAudio();
 
     return new Promise((resolve, reject) => {
-      const onCanPlay = () => {
+      let settled = false;
+
+      const cleanup = () => {
+        window.clearTimeout(timeoutId);
+        audio.removeEventListener('canplay', onCanPlay);
+        audio.removeEventListener('canplaythrough', onCanPlay);
+        audio.removeEventListener('playing', onPlaying);
+        audio.removeEventListener('error', onError);
+      };
+
+      const settleResolve = () => {
+        if (settled) return;
+        settled = true;
         cleanup();
+        resolve(audio);
+      };
+
+      const settleReject = (err: Error) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(err);
+      };
+
+      const timeoutId = window.setTimeout(() => {
+        audio.pause();
+        settleReject(new Error('QQ 音乐音频加载超时，请检查网络、代理或防火墙'));
+      }, timeoutMs);
+
+      const onCanPlay = () => {
         audio.play()
-          .then(() => resolve(audio))
-          .catch(err => reject(err));
+          .then(() => settleResolve())
+          .catch(err => {
+            settleReject(new Error(getPlaybackErrorMessage(err)));
+          });
+      };
+
+      const onPlaying = () => {
+        settleResolve();
       };
 
       const onError = () => {
-        cleanup();
         const err = audio.error;
-        let msg = '音频加载失败';
+        let msg = 'QQ 音乐音频加载失败';
         if (err) {
           switch (err.code) {
-            case MediaError.MEDIA_ERR_ABORTED: msg = '播放被中断'; break;
-            case MediaError.MEDIA_ERR_NETWORK: msg = '网络错误，无法加载音频'; break;
-            case MediaError.MEDIA_ERR_DECODE: msg = '音频解码失败'; break;
-            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED: msg = '音频格式或来源不受支持'; break;
+            case MediaError.MEDIA_ERR_ABORTED:
+              msg = '播放被中断';
+              break;
+            case MediaError.MEDIA_ERR_NETWORK:
+              msg = '网络错误，无法加载 QQ 音乐音频';
+              break;
+            case MediaError.MEDIA_ERR_DECODE:
+              msg = '音频解码失败';
+              break;
+            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+              msg = '音频格式或来源不受支持';
+              break;
           }
         }
-        reject(new Error(msg));
+        settleReject(new Error(msg));
       };
 
-      const cleanup = () => {
-        audio.oncanplay = null;
-        audio.oncanplaythrough = null;
-        audio.onerror = null;
-      };
+      audio.addEventListener('canplay', onCanPlay);
+      audio.addEventListener('canplaythrough', onCanPlay);
+      audio.addEventListener('playing', onPlaying);
+      audio.addEventListener('error', onError);
 
-      audio.oncanplay = onCanPlay;
-      audio.oncanplaythrough = onCanPlay;
-      audio.onerror = onError;
-
-      // 如果 src 没变且已经加载好了，直接播放
       if (audio.src === url && audio.readyState >= 3) {
         audio.play()
-          .then(() => resolve(audio))
-          .catch(reject);
+          .then(() => settleResolve())
+          .catch(err => {
+            settleReject(new Error(getPlaybackErrorMessage(err)));
+          });
         return;
       }
 
-      // 否则重新加载
       audio.pause();
       audio.src = url;
       audio.load();
@@ -97,4 +130,15 @@ export function useAudio() {
   }, [getAudio]);
 
   return { audioRef, play, pause, resume, seek, setVolume };
+}
+
+function getPlaybackErrorMessage(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err || '');
+  if (message.includes('NotAllowedError')) {
+    return '系统阻止了自动播放，请手动点击播放按钮重试';
+  }
+  if (message.includes('NotSupportedError')) {
+    return 'QQ 音乐音频格式或来源不受支持';
+  }
+  return message || 'QQ 音乐音频播放失败';
 }

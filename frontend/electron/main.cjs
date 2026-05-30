@@ -82,18 +82,17 @@ ipcMain.handle('app:open-data-directory', async () => {
   return { ok: true, path: dataDir };
 });
 
-// Read the bundled API key from extraResources (packaged) or backend/ (dev)
-function readBundledKey(isPackaged) {
+function readProxyToken(isPackaged) {
   try {
     const keyPath = isPackaged
-      ? path.join(process.resourcesPath, 'backend', 'release-key.txt')
-      : path.join(__dirname, '..', '..', 'backend', 'release-key.txt');
+      ? path.join(process.resourcesPath, 'backend', 'proxy-token.txt')
+      : path.join(__dirname, '..', '..', 'backend', 'proxy-token.txt');
     if (fs.existsSync(keyPath)) {
       const key = fs.readFileSync(keyPath, 'utf-8').trim();
       if (key) return key;
     }
   } catch (e) {
-    console.error('[Electron] Failed to read bundled key:', e.message);
+    console.error('[Electron] Failed to read proxy token:', e.message);
   }
   return '';
 }
@@ -140,7 +139,8 @@ function startBackend() {
       PORT: '3000',
       ELECTRON_RUN_AS_NODE: '1',
       DATABASE_PATH: userDbPath,
-      BUNDLED_DEEPSEEK_API_KEY: readBundledKey(isPackaged),
+      MELODAY_PROXY_URL: 'https://kmyppoy4p6bki.kimi.site/api/v1/deepseek',
+      MELODAY_PROXY_TOKEN: readProxyToken(isPackaged),
     },
   });
 

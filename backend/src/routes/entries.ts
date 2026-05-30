@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { run, get, all } from '../db.js';
-import { getEffectiveApiKey, incrementGenerationCount } from '../services/apikey.js';
-import { analyzeEmotions, recommendPlaylist } from '../services/deepseek.js';
+import { incrementGenerationCountIfProxy } from '../services/apikey.js';
+import { analyzeEmotions, hasAiGenerationAccess, recommendPlaylist } from '../services/deepseek.js';
 import { findPlayableSong } from '../services/qqmusic.js';
 
 const router = Router();
@@ -37,10 +37,11 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'date and content required' });
     }
 
-    const apiKey = await getEffectiveApiKey();
-    if (!apiKey) {
-      return res.status(402).json({ error: 'QUOTA_EXHAUSTED',
-        message: '免费生成次数已用完，请在设置页面配置你的 DeepSeek API Key' });
+    if (!await hasAiGenerationAccess()) {
+      return res.status(402).json({
+        error: 'QUOTA_EXHAUSTED',
+        message: '免费生成次数已用完，请在设置页配置你的 DeepSeek API Key',
+      });
     }
 
     const emotions = await analyzeEmotions(content);
@@ -51,14 +52,13 @@ router.post('/', async (req, res) => {
     if (existingEntry) {
       await run(
         'UPDATE entries SET content = ?, emotions = ? WHERE id = ?',
-        [content, JSON.stringify(emotions), existingEntry.id]
+        [content, JSON.stringify(emotions), (existingEntry as any).id]
       );
-      entryId = existingEntry.id;
-      // Remove old playlist so it can be regenerated
+      entryId = (existingEntry as any).id;
       const oldPlaylist = await get('SELECT id FROM playlists WHERE entry_id = ?', [entryId]);
       if (oldPlaylist) {
-        await run('DELETE FROM songs WHERE playlist_id = ?', [oldPlaylist.id]);
-        await run('DELETE FROM playlists WHERE id = ?', [oldPlaylist.id]);
+        await run('DELETE FROM songs WHERE playlist_id = ?', [(oldPlaylist as any).id]);
+        await run('DELETE FROM playlists WHERE id = ?', [(oldPlaylist as any).id]);
       }
     } else {
       const entryResult = await run(
@@ -68,11 +68,7 @@ router.post('/', async (req, res) => {
       entryId = entryResult.lastID;
     }
 
-    await incrementGenerationCount();
-    await incrementGenerationCount();
     const recommendations = await recommendPlaylist(content, emotions);
-
-    // 并发搜索所有推荐歌曲，避免串行超时
     const songPromises = recommendations.map(async (rec, i) => {
       const keyword = `${rec.song} ${rec.artist}`;
       const qqSong = await findPlayableSong(keyword);
@@ -95,7 +91,10 @@ router.post('/', async (req, res) => {
     const songs = songResults.filter((s): s is NonNullable<typeof s> => s !== null);
 
     if (songs.length < 3) {
-      return res.status(500).json({ error: 'Could not find enough songs' });
+      return res.status(502).json({
+        error: 'SONGS_NOT_ENOUGH',
+        message: 'AI 已返回推荐，但 QQ 音乐没有找到足够可播放歌曲，请换一段日记内容或稍后再试',
+      });
     }
 
     const playlistResult = await run(
@@ -110,6 +109,8 @@ router.post('/', async (req, res) => {
         [playlistId, song.position, song.name, song.artist, song.album, song.cover_url, song.netease_id, song.music_source, song.source_id, song.media_id, song.reason]
       );
     }
+
+    await incrementGenerationCountIfProxy();
 
     const playlistRows = await all(
       `SELECT s.*, p.entry_id, e.date as entry_date, e.is_favorite
@@ -130,12 +131,22 @@ router.post('/', async (req, res) => {
       playlist: {
         id: playlistId,
         entry_id: entryId,
-        songs: playlistRows
-      }
+        songs: playlistRows,
+      },
     });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: 'Failed to generate playlist' });
+    const err = e as Error;
+    if (err.message === 'QUOTA_EXHAUSTED' || err.message === 'PROXY_TOKEN_MISSING') {
+      return res.status(402).json({
+        error: 'QUOTA_EXHAUSTED',
+        message: '免费生成次数已用完，请在设置页配置你的 DeepSeek API Key',
+      });
+    }
+    res.status(500).json({
+      error: 'GENERATION_FAILED',
+      message: '生成歌单失败，请稍后再试',
+    });
   }
 });
 
@@ -147,12 +158,12 @@ router.get('/recent', async (_req, res) => {
     );
     const result = [];
     for (const entry of entries) {
-      const playlist = await getPlaylistForEntry(entry.id);
+      const playlist = await getPlaylistForEntry((entry as any).id);
       result.push({
-        ...entry,
-        is_favorite: Boolean(entry.is_favorite),
-        emotions: parseEmotions(entry.emotions),
-        playlist
+        ...(entry as any),
+        is_favorite: Boolean((entry as any).is_favorite),
+        emotions: parseEmotions((entry as any).emotions),
+        playlist,
       });
     }
     res.json(result);
@@ -170,10 +181,10 @@ router.get('/:date', async (req, res) => {
   const playlist = await getPlaylistForEntry((entry as any).id);
 
   res.json({
-    ...entry,
+    ...(entry as any),
     is_favorite: Boolean((entry as any).is_favorite),
     emotions: parseEmotions((entry as any).emotions),
-    playlist
+    playlist,
   });
 });
 

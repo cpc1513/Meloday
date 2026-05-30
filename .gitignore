@@ -19,6 +19,7 @@ release-final/
 !backend/.env.example
 !frontend/.env.example
 backend/.env
+backend/proxy-token.txt
 
 # Local data
 data/*.db
