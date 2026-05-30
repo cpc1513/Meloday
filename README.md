@@ -20,7 +20,7 @@ Meloday（日聆）是一款面向 Windows 的 AI 音乐日记应用。它把“
 
 ### 用日历回看每天的情绪和音乐
 
-![Meloday calendar screen](docs/screenshots/calendar.png
+![Meloday calendar screen](docs/screenshots/calendar.png)
 
 ### 在历史里找回过去的日记
 
