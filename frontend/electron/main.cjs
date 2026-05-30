@@ -82,6 +82,22 @@ ipcMain.handle('app:open-data-directory', async () => {
   return { ok: true, path: dataDir };
 });
 
+// Read the bundled API key from extraResources (packaged) or backend/ (dev)
+function readBundledKey(isPackaged) {
+  try {
+    const keyPath = isPackaged
+      ? path.join(process.resourcesPath, 'backend', 'release-key.txt')
+      : path.join(__dirname, '..', '..', 'backend', 'release-key.txt');
+    if (fs.existsSync(keyPath)) {
+      const key = fs.readFileSync(keyPath, 'utf-8').trim();
+      if (key) return key;
+    }
+  } catch (e) {
+    console.error('[Electron] Failed to read bundled key:', e.message);
+  }
+  return '';
+}
+
 function startBackend() {
   // 判断是否在打包后的环境
   const isPackaged = app.isPackaged;
@@ -124,6 +140,7 @@ function startBackend() {
       PORT: '3000',
       ELECTRON_RUN_AS_NODE: '1',
       DATABASE_PATH: userDbPath,
+      BUNDLED_DEEPSEEK_API_KEY: readBundledKey(isPackaged),
     },
   });
 

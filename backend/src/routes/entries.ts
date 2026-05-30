@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { run, get, all } from '../db.js';
+import { getEffectiveApiKey, incrementGenerationCount } from '../services/apikey.js';
 import { analyzeEmotions, recommendPlaylist } from '../services/deepseek.js';
 import { findPlayableSong } from '../services/qqmusic.js';
 
@@ -36,6 +37,12 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'date and content required' });
     }
 
+    const apiKey = await getEffectiveApiKey();
+    if (!apiKey) {
+      return res.status(402).json({ error: 'QUOTA_EXHAUSTED',
+        message: '免费生成次数已用完，请在设置页面配置你的 DeepSeek API Key' });
+    }
+
     const emotions = await analyzeEmotions(content);
 
     const existingEntry = await get('SELECT id FROM entries WHERE date = ?', [date]);
@@ -61,6 +68,8 @@ router.post('/', async (req, res) => {
       entryId = entryResult.lastID;
     }
 
+    await incrementGenerationCount();
+    await incrementGenerationCount();
     const recommendations = await recommendPlaylist(content, emotions);
 
     // 并发搜索所有推荐歌曲，避免串行超时

@@ -61,6 +61,11 @@ export async function getSettingsStatus(): Promise<SettingsStatus> {
   return res.data;
 }
 
+export async function setApiKey(apikey: string): Promise<{ ok: boolean }> {
+  const res = await client.post('/settings/apikey', { apikey });
+  return res.data;
+}
+
 export async function clearRuntimeCache(): Promise<{ ok: boolean }> {
   const res = await client.delete('/settings/cache');
   return res.data;

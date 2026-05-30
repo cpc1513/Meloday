@@ -90,6 +90,11 @@ export function initDb(): Promise<void> {
         parsed_lyrics TEXT,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
     `, (err) => {
       if (err) reject(err);
       else {

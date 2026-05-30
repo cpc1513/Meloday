@@ -2,13 +2,7 @@ import axios from 'axios';
 
 const BASE_URL = 'https://api.deepseek.com/v1';
 
-function getApiKey(): string {
-  const key = process.env.DEEPSEEK_API_KEY;
-  if (!key) {
-    throw new Error('DEEPSEEK_API_KEY is not set');
-  }
-  return key;
-}
+import { getEffectiveApiKey } from './apikey.js';
 
 interface EmotionResult {
   emotions: string[];
@@ -35,7 +29,7 @@ export async function analyzeEmotions(content: string): Promise<string[]> {
       temperature: 0.3,
       response_format: { type: 'json_object' }
     },
-    { headers: { Authorization: `Bearer ${getApiKey()}` } }
+    { headers: { Authorization: `Bearer ${await getEffectiveApiKey()}` } }
   );
 
   let result: EmotionResult;
@@ -76,7 +70,7 @@ export async function recommendPlaylist(
       temperature: 0.7,
       response_format: { type: 'json_object' }
     },
-    { headers: { Authorization: `Bearer ${getApiKey()}` } }
+    { headers: { Authorization: `Bearer ${await getEffectiveApiKey()}` } }
   );
 
   let result;

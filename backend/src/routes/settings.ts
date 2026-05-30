@@ -2,6 +2,7 @@ import { Router } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { run } from '../db.js';
+import { getGenerationInfo, setUserApiKey } from '../services/apikey.js';
 
 const router = Router();
 
@@ -27,6 +28,20 @@ router.delete('/cache', async (_req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to clear cache' });
+  }
+});
+
+router.post('/apikey', async (req, res) => {
+  try {
+    const { apikey } = req.body;
+    if (!apikey || typeof apikey !== 'string' || apikey.trim().length === 0) {
+      return res.status(400).json({ error: 'API Key is required' });
+    }
+    await setUserApiKey(apikey.trim());
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to save API Key' });
   }
 });
 

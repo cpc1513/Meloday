@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import PageHeader from '../components/PageHeader';
-import { clearRuntimeCache, getRecentEntries, getSettingsStatus } from '../api/client';
+import { clearRuntimeCache, getRecentEntries, getSettingsStatus, setApiKey } from '../api/client';
 import type { SettingsStatus } from '../types';
 
 export default function SettingsPage() {
   const [apiStatus, setApiStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   const [settings, setSettings] = useState<SettingsStatus | null>(null);
   const [message, setMessage] = useState('');
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [savingKey, setSavingKey] = useState(false);
 
   const handleExport = () => {
     getRecentEntries()
@@ -44,6 +46,21 @@ export default function SettingsPage() {
     loadStatus(true);
   };
 
+  const handleSaveApiKey = async () => {
+    if (!apiKeyInput.trim()) return;
+    setSavingKey(true);
+    try {
+      await setApiKey(apiKeyInput.trim());
+      setApiKeyInput('');
+      setMessage('API Key 已保存');
+      loadStatus(true);
+    } catch {
+      setMessage('保存失败，请重试');
+    } finally {
+      setSavingKey(false);
+    }
+  };
+
   const handleOpenDataDir = async () => {
     try {
       const result = await window.melodayWindow?.openDataDirectory();
@@ -57,6 +74,9 @@ export default function SettingsPage() {
     await clearRuntimeCache();
     setMessage('歌词缓存已清理');
   };
+
+  const generationLeft = settings ? Math.max(0, settings.generation_limit - settings.generation_count) : 0;
+  const quotaExhausted = settings ? generationLeft === 0 && !settings.has_user_key : false;
 
   return (
     <div className="page page-narrow">
@@ -87,9 +107,44 @@ export default function SettingsPage() {
           </div>
         </SettingCard>
 
-        <SettingCard title="DeepSeek 配置" desc={settings?.deepseek_configured ? 'API Key 已配置，生成音乐可正常使用。' : '未检测到 API Key，请在 backend/.env 中配置 DEEPSEEK_API_KEY。'}>
-          <div style={{ fontSize: 13, color: settings?.deepseek_configured ? 'var(--accent-green)' : '#B0544A', fontWeight: 760 }}>
-            {settings?.deepseek_configured ? '已配置' : '待配置'}
+        <SettingCard
+          title="DeepSeek 配置"
+          desc={settings?.has_user_key
+            ? '正在使用你自己的 API Key'
+            : quotaExhausted
+              ? '免费次数已用完，请填入你的 API Key'
+              : `免费生成剩余 ${generationLeft} / ${settings?.generation_limit ?? 100} 次`}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+            <div style={{ fontSize: 13, color: settings?.has_user_key ? 'var(--accent-green)' : quotaExhausted ? '#B0544A' : 'var(--accent-green)', fontWeight: 760 }}>
+              {settings?.has_user_key ? '自有 Key' : quotaExhausted ? '已用完' : '共享 Key'}
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                type="password"
+                placeholder="输入你的 DeepSeek API Key"
+                value={apiKeyInput}
+                onChange={e => setApiKeyInput(e.target.value)}
+                style={{
+                  fontSize: 12,
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-input)',
+                  color: 'var(--text-primary)',
+                  width: 240,
+                  outline: 'none',
+                }}
+              />
+              <button
+                onClick={handleSaveApiKey}
+                disabled={savingKey || !apiKeyInput.trim()}
+                className="primary-button"
+                style={{ minHeight: 30, padding: '0 14px', borderRadius: 8, fontSize: 12, opacity: savingKey ? 0.6 : 1 }}
+              >
+                {savingKey ? '保存中...' : '保存'}
+              </button>
+            </div>
           </div>
         </SettingCard>
 
@@ -115,7 +170,7 @@ export default function SettingsPage() {
           <div style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 700 }}>版本 {settings?.version || '1.0.0'}</div>
         </SettingCard>
 
-        <SettingCard title="外部音乐软件" desc="后续版本会让用户选择网易云、QQ 音乐或其他本地播放器进行连接。">
+        <SettingCard title="外部音乐组件" desc="后续版本会让用户选择网易云、QQ 音乐或其他本地播放器进行连接。">
           <div style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 700 }}>规划中</div>
         </SettingCard>
 

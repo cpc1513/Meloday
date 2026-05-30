@@ -50,6 +50,9 @@ export interface LyricLine {
 export interface SettingsStatus {
   status: 'ok';
   deepseek_configured: boolean;
+  generation_count: number;
+  generation_limit: number;
+  has_user_key: boolean;
   database_path: string;
   music_source?: string;
   music_source_label?: string;
