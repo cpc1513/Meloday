@@ -10,6 +10,7 @@ interface PlayerContextType {
   currentTime: number;
   duration: number;
   isLoading: boolean;
+  volume: number;
   setPlaylist: (songs: Song[]) => void;
   playAt: (index: number) => void;
   togglePlay: () => void;
@@ -18,6 +19,8 @@ interface PlayerContextType {
   setProgress: (progress: number) => void;
   setTimeInfo: (currentTime: number, duration: number) => void;
   setLoading: (loading: boolean) => void;
+  setVolume: (volume: number) => void;
+  updateFavoriteForEntry: (entryId: number, isFavorite: boolean) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | null>(null);
@@ -30,6 +33,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [volume, setVolumeState] = useState(() => {
+    const saved = Number(localStorage.getItem('meloday_volume'));
+    return Number.isFinite(saved) ? Math.min(1, Math.max(0, saved)) : 0.8;
+  });
 
   const currentSong = playlist[currentIndex] || null;
 
@@ -42,19 +49,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const playAt = useCallback((index: number) => {
-    if (index >= 0 && index < playlist.length) {
+    if (index >= 0) {
       setCurrentIndex(index);
       setIsPlaying(true);
       setIsLoading(true);
       setProgress(0);
     }
-  }, [playlist.length]);
+  }, []);
 
   const togglePlay = useCallback(() => {
     setIsPlaying(prev => !prev);
   }, []);
 
   const next = useCallback(() => {
+    if (playlist.length === 0) return;
     const newIndex = (currentIndex + 1) % playlist.length;
     setCurrentIndex(newIndex);
     setIsLoading(true);
@@ -62,6 +70,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [currentIndex, playlist.length]);
 
   const prev = useCallback(() => {
+    if (playlist.length === 0) return;
     const newIndex = currentIndex === 0 ? playlist.length - 1 : currentIndex - 1;
     setCurrentIndex(newIndex);
     setIsLoading(true);
@@ -76,12 +85,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setVolume = useCallback((nextVolume: number) => {
+    const normalized = Math.min(1, Math.max(0, nextVolume));
+    setVolumeState(normalized);
+    localStorage.setItem('meloday_volume', String(normalized));
+  }, []);
+
+  const updateFavoriteForEntry = useCallback((entryId: number, isFavorite: boolean) => {
+    setPlaylistState(songs => songs.map(song => (
+      song.entry_id === entryId ? { ...song, is_favorite: isFavorite } : song
+    )));
+  }, []);
+
   return (
     <PlayerContext.Provider value={{
       playlist, currentIndex, currentSong, isPlaying,
-      progress, currentTime, duration, isLoading,
+      progress, currentTime, duration, isLoading, volume,
       setPlaylist, playAt, togglePlay, next, prev,
-      setProgress, setTimeInfo, setLoading: setIsLoading
+      setProgress, setTimeInfo, setLoading: setIsLoading, setVolume, updateFavoriteForEntry
     }}>
       {children}
     </PlayerContext.Provider>

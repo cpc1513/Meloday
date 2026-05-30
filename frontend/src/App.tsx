@@ -8,6 +8,7 @@ import DiaryPage from './pages/DiaryPage';
 import CalendarPage from './pages/CalendarPage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
+import PlayerPage from './pages/PlayerPage';
 import { PlayerProvider } from './hooks/usePlayer';
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
                   <Route path="/" element={<DiaryPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/history" element={<HistoryPage />} />
+                  <Route path="/player" element={<PlayerPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                 </Routes>
               </main>

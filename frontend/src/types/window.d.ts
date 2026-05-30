@@ -7,6 +7,7 @@ declare global {
       toggleMaximize: () => Promise<boolean>;
       isMaximized: () => Promise<boolean>;
       close: () => Promise<void>;
+      openDataDirectory: () => Promise<{ ok: boolean; path?: string }>;
     };
   }
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getRecentEntries } from '../api/client';
+import { getRecentEntries, setEntryFavorite } from '../api/client';
 import { usePlayer } from '../hooks/usePlayer';
 import PageHeader from '../components/PageHeader';
 import CoverImage from '../components/CoverImage';
@@ -9,6 +9,7 @@ import type { Entry, Song } from '../types';
 export default function HistoryPage() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [query, setQuery] = useState('');
   const { setPlaylist, playAt } = usePlayer();
 
   useEffect(() => {
@@ -22,9 +23,42 @@ export default function HistoryPage() {
     playAt(index);
   };
 
+  const handleFavorite = async (entry: Entry) => {
+    const result = await setEntryFavorite(entry.id, !entry.is_favorite);
+    setEntries(current => current.map(item => (
+      item.id === entry.id ? { ...item, is_favorite: result.is_favorite } : item
+    )));
+  };
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredEntries = normalizedQuery
+    ? entries.filter(entry => {
+        const haystack = [
+          entry.date,
+          entry.content,
+          entry.emotions.join(' '),
+          ...(entry.playlist?.songs.flatMap(song => [song.name, song.artist]) || [])
+        ].join(' ').toLowerCase();
+        return haystack.includes(normalizedQuery);
+      })
+    : entries;
+
   return (
     <div className="page page-narrow">
       <PageHeader title="历史" subtitle="回看你的音乐日记" />
+
+      <div className="glass-panel" style={{ borderRadius: 16, padding: '12px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <SearchIcon />
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="搜索日期、日记内容、情绪、歌曲或歌手"
+          style={{ flex: 1, fontSize: 14, color: 'var(--text-primary)' }}
+        />
+        {query && (
+          <button className="ghost-button" onClick={() => setQuery('')} style={{ minHeight: 28, padding: '0 10px' }}>清除</button>
+        )}
+      </div>
 
       {entries.length === 0 ? (
         <div className="glass-panel" style={{ borderRadius: 18, textAlign: 'center', padding: '64px 24px', color: 'var(--text-secondary)' }}>
@@ -32,9 +66,13 @@ export default function HistoryPage() {
           <div style={{ fontSize: 17, fontWeight: 760, marginBottom: 6, color: 'var(--text-primary)' }}>还没有日记</div>
           <div style={{ fontSize: 13 }}>写下第一篇日记，让 Meloday 为它配一首歌。</div>
         </div>
+      ) : filteredEntries.length === 0 ? (
+        <div className="glass-panel" style={{ borderRadius: 18, textAlign: 'center', padding: '48px 24px', color: 'var(--text-secondary)' }}>
+          没有找到匹配的日记或歌曲
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {entries.map(entry => {
+          {filteredEntries.map(entry => {
             const firstSong = entry.playlist?.songs[0];
             const diaryPreview = entry.content.length > 92
               ? `${entry.content.slice(0, 92)}...`
@@ -62,7 +100,7 @@ export default function HistoryPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
                       <div style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 760 }}>
-                        {entry.date.replace(/-/g, ' / ')}
+                        {entry.date.replace(/-/g, ' / ')} {entry.is_favorite ? ' · 已收藏' : ''}
                       </div>
                       <div style={{ color: 'var(--text-tertiary)', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.18s ease' }}>
                         <ChevronDown />
@@ -120,6 +158,13 @@ export default function HistoryPage() {
                           >
                             播放全部
                           </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleFavorite(entry); }}
+                            className="ghost-button"
+                            style={{ minHeight: 34, borderRadius: 10, padding: '0 13px' }}
+                          >
+                            {entry.is_favorite ? '取消收藏' : '收藏这一天'}
+                          </button>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {entry.playlist.songs.map((song, idx) => (
@@ -169,4 +214,8 @@ export default function HistoryPage() {
 
 function ChevronDown() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>;
+}
+
+function SearchIcon() {
+  return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>;
 }

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Entry, CalendarDay } from '../types';
+import type { Entry, CalendarDay, LyricLine, SettingsStatus } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000/api';
 
@@ -43,6 +43,26 @@ export async function getRecentEntries(): Promise<Entry[]> {
 
 export async function getPlayUrl(neteaseId: number): Promise<{ url: string; expires_in: number }> {
   const res = await client.get(`/songs/${neteaseId}/play-url`);
+  return res.data;
+}
+
+export async function getLyrics(neteaseId: number): Promise<{ lines: LyricLine[]; raw: string; message?: string | null }> {
+  const res = await client.get(`/songs/${neteaseId}/lyrics`);
+  return res.data;
+}
+
+export async function setEntryFavorite(entryId: number, isFavorite: boolean): Promise<{ id: number; is_favorite: boolean }> {
+  const res = await client.put(`/entries/${entryId}/favorite`, { is_favorite: isFavorite });
+  return res.data;
+}
+
+export async function getSettingsStatus(): Promise<SettingsStatus> {
+  const res = await client.get('/settings/status');
+  return res.data;
+}
+
+export async function clearRuntimeCache(): Promise<{ ok: boolean }> {
+  const res = await client.delete('/settings/cache');
   return res.data;
 }
 

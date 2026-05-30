@@ -5,4 +5,5 @@ contextBridge.exposeInMainWorld('melodayWindow', {
   toggleMaximize: () => ipcRenderer.invoke('window:maximize-toggle'),
   isMaximized: () => ipcRenderer.invoke('window:is-maximized'),
   close: () => ipcRenderer.invoke('window:close'),
+  openDataDirectory: () => ipcRenderer.invoke('app:open-data-directory'),
 });

@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import PageHeader from '../components/PageHeader';
+import { clearRuntimeCache, getRecentEntries, getSettingsStatus } from '../api/client';
+import type { SettingsStatus } from '../types';
 
 export default function SettingsPage() {
   const [apiStatus, setApiStatus] = useState<'checking' | 'ok' | 'error'>('checking');
+  const [settings, setSettings] = useState<SettingsStatus | null>(null);
+  const [message, setMessage] = useState('');
 
   const handleExport = () => {
-    fetch('http://localhost:3000/api/entries/recent')
-      .then(r => r.json())
+    getRecentEntries()
       .then(data => {
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -15,14 +18,44 @@ export default function SettingsPage() {
         a.download = `meloday-backup-${new Date().toISOString().split('T')[0]}.json`;
         a.click();
         URL.revokeObjectURL(url);
+        setMessage('备份已导出');
       });
   };
 
+  const loadStatus = useCallback((showChecking: boolean) => {
+    if (showChecking) setApiStatus('checking');
+    getSettingsStatus()
+      .then(data => {
+        setSettings(data);
+        setApiStatus('ok');
+      })
+      .catch(() => {
+        setSettings(null);
+        setApiStatus('error');
+      });
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => loadStatus(false), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadStatus]);
+
   const handleCheckApi = () => {
-    setApiStatus('checking');
-    fetch('http://localhost:3000/api/health')
-      .then(r => r.ok ? setApiStatus('ok') : setApiStatus('error'))
-      .catch(() => setApiStatus('error'));
+    loadStatus(true);
+  };
+
+  const handleOpenDataDir = async () => {
+    try {
+      const result = await window.melodayWindow?.openDataDirectory();
+      setMessage(result?.ok ? '已打开数据目录' : '只能在 Electron 应用中打开数据目录');
+    } catch {
+      setMessage('打开数据目录失败');
+    }
+  };
+
+  const handleClearCache = async () => {
+    await clearRuntimeCache();
+    setMessage('歌词缓存已清理');
   };
 
   return (
@@ -54,9 +87,37 @@ export default function SettingsPage() {
           </div>
         </SettingCard>
 
-        <SettingCard title="关于" desc="Meloday 音乐日记">
-          <div style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 700 }}>版本 1.0.0</div>
+        <SettingCard title="DeepSeek 配置" desc={settings?.deepseek_configured ? 'API Key 已配置，生成音乐可正常使用。' : '未检测到 API Key，请在 backend/.env 中配置 DEEPSEEK_API_KEY。'}>
+          <div style={{ fontSize: 13, color: settings?.deepseek_configured ? 'var(--accent-green)' : '#B0544A', fontWeight: 760 }}>
+            {settings?.deepseek_configured ? '已配置' : '待配置'}
+          </div>
         </SettingCard>
+
+        <SettingCard title="数据目录" desc={settings?.database_path || '当前环境暂未返回数据库路径'}>
+          <button onClick={handleOpenDataDir} className="ghost-button" style={{ minHeight: 34 }}>
+            打开目录
+          </button>
+        </SettingCard>
+
+        <SettingCard title="运行缓存" desc="清理在线歌词缓存。封面来自网易云 CDN，不会删除你的日记和歌单。">
+          <button onClick={handleClearCache} className="ghost-button" style={{ minHeight: 34 }}>
+            清理缓存
+          </button>
+        </SettingCard>
+
+        <SettingCard title="关于" desc="Meloday 音乐日记">
+          <div style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 700 }}>版本 {settings?.version || '1.0.0'}</div>
+        </SettingCard>
+
+        <SettingCard title="外部音乐软件" desc="后续版本会让用户选择网易云、QQ 音乐或其他本地播放器进行连接。">
+          <div style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 700 }}>规划中</div>
+        </SettingCard>
+
+        {message && (
+          <div className="glass-panel" style={{ borderRadius: 14, padding: 14, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 650 }}>
+            {message}
+          </div>
+        )}
       </div>
     </div>
   );

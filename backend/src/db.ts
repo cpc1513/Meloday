@@ -48,6 +48,7 @@ export function initDb(): Promise<void> {
         date TEXT NOT NULL UNIQUE,
         content TEXT NOT NULL,
         emotions TEXT,
+        is_favorite INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -79,9 +80,20 @@ export function initDb(): Promise<void> {
         duration INTEGER,
         FOREIGN KEY (song_id) REFERENCES songs(id)
       );
+
+      CREATE TABLE IF NOT EXISTS lyrics_cache (
+        netease_id INTEGER PRIMARY KEY,
+        raw_lyrics TEXT,
+        parsed_lyrics TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
     `, (err) => {
       if (err) reject(err);
-      else resolve();
+      else {
+        db.run('ALTER TABLE entries ADD COLUMN is_favorite INTEGER DEFAULT 0', () => {
+          resolve();
+        });
+      }
     });
   });
 }
