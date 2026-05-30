@@ -2,9 +2,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 const navItems = [
   { id: 'diary', label: '日记', path: '/', icon: DiaryIcon },
+  { id: 'player', label: '播放', path: '/player', icon: PlayerIcon },
   { id: 'calendar', label: '日历', path: '/calendar', icon: CalendarIcon },
   { id: 'history', label: '历史', path: '/history', icon: HistoryIcon },
-  { id: 'player', label: '播放', path: '/player', icon: PlayerIcon },
   { id: 'settings', label: '设置', path: '/settings', icon: SettingsIcon },
 ];
 
