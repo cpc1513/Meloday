@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getCalendar } from '../api/client';
 import { getEmotionBg, getEmotionBorder, getEmotionText } from '../utils/emotion';
+import { formatLocalDate } from '../utils/date';
 import type { CalendarDay } from '../types';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
@@ -28,6 +29,7 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [entryDays, setEntryDays] = useState<Record<string, CalendarDay>>({});
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     getCalendar(year, month).then(data => {
@@ -47,23 +49,25 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
     const prevMonthLastDay = new Date(year, month - 1, 0).getDate();
     for (let i = startWeekday - 1; i >= 0; i--) {
       const d = prevMonthLastDay - i;
-      const dateStr = formatDate(new Date(year, month - 2, d));
+      const dateStr = formatLocalDate(new Date(year, month - 2, d));
       result.push(toCell(dateStr, d, false, entryDays[dateStr]));
     }
 
     for (let d = 1; d <= totalDays; d++) {
-      const dateStr = formatDate(new Date(year, month - 1, d));
+      const dateStr = formatLocalDate(new Date(year, month - 1, d));
       result.push(toCell(dateStr, d, true, entryDays[dateStr]));
     }
 
     const remaining = (7 - (result.length % 7)) % 7;
     for (let d = 1; d <= remaining; d++) {
-      const dateStr = formatDate(new Date(year, month, d));
+      const dateStr = formatLocalDate(new Date(year, month, d));
       result.push(toCell(dateStr, d, false, entryDays[dateStr]));
     }
 
     return result;
   }, [year, month, entryDays]);
+
+  const rowCount = Math.ceil(cells.length / 7);
 
   const goPrev = () => {
     setYear(y => month === 1 ? y - 1 : y);
@@ -75,11 +79,16 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
     setMonth(m => m === 12 ? 1 : m + 1);
   };
 
+  const selectDate = (dateStr: string) => {
+    const [nextYear, nextMonth] = dateStr.split('-').map(Number);
+    setYear(nextYear);
+    setMonth(nextMonth);
+    setPickerOpen(false);
+    onSelectDay?.(entryDays[dateStr] || toCalendarDay(dateStr));
+  };
+
   const goToday = () => {
-    const next = new Date();
-    setYear(next.getFullYear());
-    setMonth(next.getMonth() + 1);
-    handleClick(toCell(formatDate(next), next.getDate(), true, entryDays[formatDate(next)]));
+    selectDate(formatLocalDate(new Date()));
   };
 
   const handleClick = (cell: CalendarCell) => {
@@ -105,6 +114,19 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
         <div className="calendar-actions">
           <button onClick={goPrev} aria-label="上个月" className="icon-button"><ChevronLeft /></button>
           <button onClick={goNext} aria-label="下个月" className="icon-button"><ChevronRight /></button>
+          <div className="calendar-picker-wrap">
+            <button onClick={() => setPickerOpen(open => !open)} className="ghost-button">选择日期</button>
+            {pickerOpen && (
+              <div className="calendar-picker-popover">
+                <input
+                  aria-label="选择日期"
+                  type="date"
+                  value={selectedDate || formatLocalDate(now)}
+                  onChange={event => selectDate(event.target.value)}
+                />
+              </div>
+            )}
+          </div>
           <button onClick={goToday} className="ghost-button">今天</button>
         </div>
       </div>
@@ -115,10 +137,13 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
         ))}
       </div>
 
-      <div className="calendar-cells">
+      <div
+        className={rowCount >= 6 ? 'calendar-cells calendar-cells-six' : 'calendar-cells'}
+        style={{ gridTemplateRows: `repeat(${rowCount}, minmax(0, 1fr))` }}
+      >
         {cells.map(cell => {
           const isSelected = selectedDate === cell.date;
-          const isToday = cell.date === formatDate(new Date());
+          const isToday = cell.date === formatLocalDate(new Date());
           const emotion = cell.emotionKeyword || cell.emotions?.[0] || '';
           return (
             <button
@@ -190,14 +215,23 @@ function toCell(date: string, dayOfMonth: number, isCurrentMonth: boolean, entry
   };
 }
 
+function toCalendarDay(date: string): CalendarDay {
+  return {
+    date,
+    has_entry: false,
+    emotions: null,
+    song_cover: null,
+    emotion_color: null,
+    emotion_keyword: null,
+    holiday: null,
+    is_favorite: false,
+  };
+}
+
 function ChevronLeft() {
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>;
 }
 
 function ChevronRight() {
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>;
-}
-
-function formatDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

@@ -2,13 +2,12 @@ import { useState } from 'react';
 import CalendarGrid from '../components/CalendarGrid';
 import DayDetail from '../components/DayDetail';
 import PageHeader from '../components/PageHeader';
+import { formatLocalDate } from '../utils/date';
 import type { CalendarDay } from '../types';
 
 function todayAsCalendarDay(): CalendarDay {
-  const now = new Date();
-  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   return {
-    date,
+    date: formatLocalDate(new Date()),
     has_entry: false,
     emotions: null,
     song_cover: null,

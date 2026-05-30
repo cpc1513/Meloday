@@ -30,11 +30,33 @@ async function getPlaylistForEntry(entryId: number) {
   return playlist ? { ...(playlist as any), songs } : null;
 }
 
+async function deletePlaylistForEntry(entryId: number) {
+  const playlist = await get('SELECT id FROM playlists WHERE entry_id = ?', [entryId]);
+  if (!playlist) return;
+
+  const playlistId = (playlist as any).id;
+  await run(
+    `DELETE FROM plays
+     WHERE song_id IN (SELECT id FROM songs WHERE playlist_id = ?)`,
+    [playlistId]
+  );
+  await run('DELETE FROM songs WHERE playlist_id = ?', [playlistId]);
+  await run('DELETE FROM playlists WHERE id = ?', [playlistId]);
+}
+
 router.post('/', async (req, res) => {
   try {
-    const { date, content } = req.body;
+    const { date, content, overwrite } = req.body;
     if (!date || !content) {
       return res.status(400).json({ error: 'date and content required' });
+    }
+
+    const existingEntry = await get('SELECT id, is_favorite FROM entries WHERE date = ?', [date]);
+    if (existingEntry && !overwrite) {
+      return res.status(409).json({
+        error: 'ENTRY_EXISTS',
+        message: '今天已经有一篇日记和歌单了，请确认是否更新这一天。',
+      });
     }
 
     if (!await hasAiGenerationAccess()) {
@@ -45,29 +67,6 @@ router.post('/', async (req, res) => {
     }
 
     const emotions = await analyzeEmotions(content);
-
-    const existingEntry = await get('SELECT id FROM entries WHERE date = ?', [date]);
-    let entryId: number;
-
-    if (existingEntry) {
-      await run(
-        'UPDATE entries SET content = ?, emotions = ? WHERE id = ?',
-        [content, JSON.stringify(emotions), (existingEntry as any).id]
-      );
-      entryId = (existingEntry as any).id;
-      const oldPlaylist = await get('SELECT id FROM playlists WHERE entry_id = ?', [entryId]);
-      if (oldPlaylist) {
-        await run('DELETE FROM songs WHERE playlist_id = ?', [(oldPlaylist as any).id]);
-        await run('DELETE FROM playlists WHERE id = ?', [(oldPlaylist as any).id]);
-      }
-    } else {
-      const entryResult = await run(
-        'INSERT INTO entries (date, content, emotions) VALUES (?, ?, ?)',
-        [date, content, JSON.stringify(emotions)]
-      );
-      entryId = entryResult.lastID;
-    }
-
     const recommendations = await recommendPlaylist(content, emotions);
     const songPromises = recommendations.map(async (rec, i) => {
       const keyword = `${rec.song} ${rec.artist}`;
@@ -94,6 +93,25 @@ router.post('/', async (req, res) => {
         error: 'SONGS_NOT_ENOUGH',
         message: 'AI 已返回推荐，但 QQ 音乐没有找到足够可播放歌曲，请换一段日记内容或稍后再试',
       });
+    }
+
+    let entryId: number;
+    let isFavorite = 0;
+
+    if (existingEntry) {
+      entryId = (existingEntry as any).id;
+      isFavorite = (existingEntry as any).is_favorite || 0;
+      await run(
+        'UPDATE entries SET content = ?, emotions = ? WHERE id = ?',
+        [content, JSON.stringify(emotions), entryId]
+      );
+      await deletePlaylistForEntry(entryId);
+    } else {
+      const entryResult = await run(
+        'INSERT INTO entries (date, content, emotions) VALUES (?, ?, ?)',
+        [date, content, JSON.stringify(emotions)]
+      );
+      entryId = entryResult.lastID;
     }
 
     const playlistResult = await run(
@@ -126,7 +144,7 @@ router.post('/', async (req, res) => {
       date,
       content,
       emotions,
-      is_favorite: 0,
+      is_favorite: Boolean(isFavorite),
       playlist: {
         id: playlistId,
         entry_id: entryId,
@@ -169,6 +187,23 @@ router.get('/recent', async (_req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to fetch recent entries' });
+  }
+});
+
+router.delete('/:id', async (req, res) => {
+  try {
+    const entryId = Number(req.params.id);
+    if (!Number.isFinite(entryId)) {
+      return res.status(400).json({ error: 'Invalid entry id' });
+    }
+
+    await deletePlaylistForEntry(entryId);
+    const result = await run('DELETE FROM entries WHERE id = ?', [entryId]);
+    if (!result.changes) return res.status(404).json({ error: 'Not found' });
+    res.json({ ok: true, id: entryId });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to delete entry' });
   }
 });
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import PageHeader from '../components/PageHeader';
 import CoverImage from '../components/CoverImage';
 import { getLyrics, setEntryFavorite } from '../api/client';
@@ -78,9 +79,9 @@ export default function PlayerPage() {
     return (
       <div className="page page-narrow">
         <PageHeader title="播放器" subtitle="选择一首今日音乐后，这里会显示歌词和完整歌单。" />
-        <div className="glass-panel" style={{ borderRadius: 18, padding: 54, textAlign: 'center', color: 'var(--text-secondary)' }}>
-          <div style={{ fontSize: 42, marginBottom: 12 }}>♪</div>
-          <div style={{ fontSize: 16, fontWeight: 760, color: 'var(--text-primary)' }}>还没有正在播放的歌曲</div>
+        <div className="glass-panel player-empty">
+          <div className="player-empty-icon">♪</div>
+          <div className="player-empty-title">还没有正在播放的歌曲</div>
         </div>
       </div>
     );
@@ -88,72 +89,66 @@ export default function PlayerPage() {
 
   return (
     <div className="page">
-      <PageHeader title="播放器" subtitle={currentSong.entry_date ? `${currentSong.entry_date.replace(/-/g, ' / ')} 的今日歌单` : '今日音乐正在播放'} />
+      <PageHeader
+        title="播放器"
+        subtitle={currentSong.entry_date ? `${currentSong.entry_date.replace(/-/g, ' / ')} 的今日歌单` : '今日音乐正在播放'}
+      />
 
       <section className="player-page-grid">
-        <div className="glass-panel" style={{ borderRadius: 18, padding: 22, display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div className="glass-panel player-panel player-panel-main">
           <CoverImage song={currentSong} size={260} />
           <div>
-            <div style={{ fontSize: 26, lineHeight: 1.18, fontWeight: 780, color: 'var(--text-primary)' }}>{currentSong.name}</div>
-            <div style={{ marginTop: 6, color: 'var(--text-secondary)', fontSize: 15 }}>{currentSong.artist || 'Unknown Artist'}</div>
+            <div className="player-song-title">{currentSong.name}</div>
+            <div className="player-song-artist">{currentSong.artist || 'Unknown Artist'}</div>
           </div>
 
           <div>
-            <div style={{ height: 7, background: 'var(--bg-hover)', borderRadius: 999, overflow: 'hidden', marginBottom: 8 }}>
-              <div style={{ width: `${progress}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, var(--accent), var(--accent-blue))' }} />
+            <div className="player-progress-track">
+              <div className="player-progress-bar" style={{ width: `${progress}%` }} />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 650 }}>
+            <div className="player-time-row">
               <span>{formatTime(currentTime)}</span>
               <span>{formatTime(duration)}</span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div className="player-controls">
             <ControlButton label="上一首" onClick={prev}><PrevIcon /></ControlButton>
-            <button onClick={togglePlay} aria-label={isPlaying ? '暂停' : '播放'} style={{ width: 52, height: 52, borderRadius: 16, background: 'var(--accent-dark)', color: '#fff', display: 'grid', placeItems: 'center' }}>
+            <button onClick={togglePlay} aria-label={isPlaying ? '暂停' : '播放'} className="player-play-button">
               {isPlaying ? <PauseIcon /> : <PlayIcon />}
             </button>
             <ControlButton label="下一首" onClick={next}><NextIcon /></ControlButton>
-            <button disabled={isFavoriteBusy} onClick={handleFavorite} className="ghost-button" style={{ minHeight: 38 }}>
+            <button disabled={isFavoriteBusy} onClick={handleFavorite} className="ghost-button player-favorite-button">
               <HeartIcon filled={isFavorite} />
               {isFavorite ? '已收藏' : '收藏这一天'}
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 700 }}>音量</span>
-            <input aria-label="音量" type="range" min="0" max="1" step="0.01" value={volume} onChange={e => setVolume(Number(e.target.value))} style={{ flex: 1, accentColor: 'var(--accent)' }} />
-            <span style={{ width: 36, textAlign: 'right', fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 700 }}>{Math.round(volume * 100)}%</span>
+          <div className="player-volume-row">
+            <span>音量</span>
+            <input aria-label="音量" type="range" min="0" max="1" step="0.01" value={volume} onChange={e => setVolume(Number(e.target.value))} />
+            <span>{Math.round(volume * 100)}%</span>
           </div>
 
-          <div style={{ background: 'var(--bg-input)', borderRadius: 16, padding: 16, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.7 }}>
+          <div className="player-reason">
             {currentSong.reason || '根据你的日记生成的今日音乐。'}
           </div>
         </div>
 
-        <div className="glass-panel" style={{ borderRadius: 18, padding: 22, minHeight: 520 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-            <div>
-              <div style={{ color: 'var(--text-tertiary)', fontSize: 12, fontWeight: 760 }}>LYRICS</div>
-              <div style={{ fontSize: 20, fontWeight: 780, color: 'var(--text-primary)' }}>在线歌词</div>
-            </div>
+        <div className="glass-panel player-panel">
+          <div className="player-panel-heading">
+            <div>LYRICS</div>
+            <h2>在线歌词</h2>
           </div>
 
           {lyricsForCurrentSong.length ? (
-            <div style={{ maxHeight: 466, overflow: 'auto', paddingRight: 8 }}>
+            <div className="player-scroll">
               {lyricsForCurrentSong.map((line, index) => {
                 const active = index === activeLyricIndex;
                 return (
                   <div
                     key={`${line.time}-${line.text}`}
-                    style={{
-                      padding: '9px 0',
-                      fontSize: active ? 20 : 15,
-                      lineHeight: 1.55,
-                      fontWeight: active ? 780 : 600,
-                      color: active ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                      transition: 'font-size 0.18s ease, color 0.18s ease',
-                    }}
+                    className={active ? 'player-lyric-line active' : 'player-lyric-line'}
                   >
                     {line.text}
                   </div>
@@ -161,35 +156,29 @@ export default function PlayerPage() {
               })}
             </div>
           ) : (
-            <div style={{ background: 'var(--bg-input)', borderRadius: 16, padding: 22, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
-              <div style={{ fontWeight: 760, color: 'var(--text-primary)', marginBottom: 8 }}>{currentLyricsMessage}</div>
-              <div>{currentSong.reason || '这首歌来自今天的情绪推荐。'}</div>
+            <div className="player-scroll">
+              <div className="player-lyric-fallback">
+                <div>{currentLyricsMessage}</div>
+                <p>{currentSong.reason || '这首歌来自今天的情绪推荐。'}</p>
+              </div>
             </div>
           )}
         </div>
 
-        <aside className="glass-panel" style={{ borderRadius: 18, padding: 18 }}>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 760, marginBottom: 12 }}>
+        <aside className="glass-panel player-panel">
+          <div className="player-playlist-title">
             当前歌单 · {playlist.length} 首
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="player-scroll player-playlist-list">
             {playlist.map((song, index) => (
-              <button key={song.id} onClick={() => playAt(index)} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: 9,
-                borderRadius: 12,
-                background: index === currentIndex ? 'var(--bg-hover)' : 'transparent',
-                textAlign: 'left',
-              }}>
-                <div style={{ width: 22, textAlign: 'center', color: index === currentIndex ? 'var(--accent)' : 'var(--text-tertiary)', fontSize: 12, fontWeight: 760 }}>
+              <button key={song.id} onClick={() => playAt(index)} className={index === currentIndex ? 'player-playlist-song active' : 'player-playlist-song'}>
+                <div className="player-playlist-index">
                   {index === currentIndex && isPlaying ? '♪' : index + 1}
                 </div>
                 <CoverImage song={song} size={42} />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 720, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.artist || 'Unknown'}</div>
+                <div className="player-playlist-meta">
+                  <div>{song.name}</div>
+                  <span>{song.artist || 'Unknown'}</span>
                 </div>
               </button>
             ))}
@@ -200,8 +189,8 @@ export default function PlayerPage() {
   );
 }
 
-function ControlButton({ children, label, onClick }: { children: React.ReactNode; label: string; onClick: () => void }) {
-  return <button onClick={onClick} aria-label={label} title={label} className="icon-button" style={{ width: 42, height: 42 }}>{children}</button>;
+function ControlButton({ children, label, onClick }: { children: ReactNode; label: string; onClick: () => void }) {
+  return <button onClick={onClick} aria-label={label} title={label} className="icon-button player-icon-button">{children}</button>;
 }
 
 function HeartIcon({ filled }: { filled: boolean }) {

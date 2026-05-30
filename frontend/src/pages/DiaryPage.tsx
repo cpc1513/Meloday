@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader';
 import { useToast } from '../components/Toast';
 import { createEntry } from '../api/client';
 import { usePlayer } from '../hooks/usePlayer';
+import { formatLocalDate } from '../utils/date';
 import type { Entry } from '../types';
 
 const DRAFT_KEY = 'meloday_draft';
@@ -31,8 +32,22 @@ export default function DiaryPage() {
     if (!content.trim()) return;
     setIsLoading(true);
     try {
-      const date = new Date().toISOString().split('T')[0];
-      const result = await createEntry(date, content);
+      const date = formatLocalDate(new Date());
+      let result: Entry;
+
+      try {
+        result = await createEntry(date, content);
+      } catch (e: unknown) {
+        const error = e as { response?: { status?: number; data?: { error?: string } } };
+        if (error.response?.status !== 409 || error.response.data?.error !== 'ENTRY_EXISTS') {
+          throw e;
+        }
+
+        const shouldOverwrite = window.confirm('今天已经有一篇日记和歌单了。要更新今天的日记和歌单吗？');
+        if (!shouldOverwrite) return;
+        result = await createEntry(date, content, true);
+      }
+
       setEntry(result);
       localStorage.removeItem(DRAFT_KEY);
       showSuccess('已为你生成今日歌单');

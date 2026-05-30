@@ -76,7 +76,7 @@ export async function findPlayableSong(keyword: string): Promise<QQMusicSong | n
 
   const urls = await getBatchPlayUrls(candidates.map(song => song.id));
   const playable = candidates.find(song => urls[song.id]);
-  if (playable) return playable;
+  if (playable) return enrichCover(playable);
 
   const urlChecks = await Promise.all(
     candidates.slice(0, 4).map(async song => ({
@@ -84,7 +84,8 @@ export async function findPlayableSong(keyword: string): Promise<QQMusicSong | n
       url: await getPlayUrl(song.id, song.mediaId),
     }))
   );
-  return urlChecks.find(item => item.url)?.song || null;
+  const checkedPlayable = urlChecks.find(item => item.url)?.song;
+  return checkedPlayable ? enrichCover(checkedPlayable) : null;
 }
 
 export async function getLyrics(songmid: string): Promise<{ raw: string; lines: LyricLine[] }> {
@@ -197,6 +198,37 @@ async function getSinglePlayUrl(songmid: string, mediaId: string, type: '128' | 
   return purl && domain ? `${domain}${purl}` : null;
 }
 
+async function enrichCover(song: QQMusicSong): Promise<QQMusicSong> {
+  if (song.coverUrl) return song;
+  const albumMid = await getAlbumMid(song.id);
+  return albumMid
+    ? { ...song, coverUrl: buildCoverUrl(albumMid) }
+    : song;
+}
+
+async function getAlbumMid(songmid: string): Promise<string> {
+  try {
+    const res = await axios.get('https://u.y.qq.com/cgi-bin/musicu.fcg', {
+      params: {
+        format: 'json',
+        data: JSON.stringify({
+          comm: { ct: 24, cv: 0 },
+          songinfo: {
+            module: 'music.pf_song_detail_svr',
+            method: 'get_song_detail_yqq',
+            param: { song_mid: songmid },
+          },
+        }),
+      },
+      headers: { Referer: QQ_REFERER },
+      timeout: REQUEST_TIMEOUT,
+    });
+    return res.data?.songinfo?.data?.track_info?.album?.mid || '';
+  } catch {
+    return '';
+  }
+}
+
 function normalizeSong(song: QQSearchSong): QQMusicSong | null {
   const id = song.songmid || song.mid;
   if (!id) return null;
@@ -207,8 +239,12 @@ function normalizeSong(song: QQSearchSong): QQMusicSong | null {
     name: stripHtml(song.songname || song.title || song.name || ''),
     artist: (song.singer || []).map(item => item.name).filter(Boolean).join(' / ') || 'Unknown',
     album: song.albumname || song.album?.name || '',
-    coverUrl: albumMid ? `https://y.qq.com/music/photo_new/T002R300x300M000${albumMid}.jpg` : '',
+    coverUrl: albumMid ? buildCoverUrl(albumMid) : '',
   };
+}
+
+function buildCoverUrl(albumMid: string): string {
+  return `https://y.qq.com/music/photo_new/T002R300x300M000${albumMid}.jpg`;
 }
 
 function decodeBase64(value: string): string {

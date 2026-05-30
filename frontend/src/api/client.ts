@@ -21,8 +21,13 @@ client.interceptors.response.use(
   }
 );
 
-export async function createEntry(date: string, content: string): Promise<Entry> {
-  const res = await client.post('/entries', { date, content });
+export async function createEntry(date: string, content: string, overwrite = false): Promise<Entry> {
+  const res = await client.post('/entries', { date, content, overwrite });
+  return res.data;
+}
+
+export async function deleteEntry(entryId: number): Promise<{ ok: boolean; id: number }> {
+  const res = await client.delete(`/entries/${entryId}`);
   return res.data;
 }
 

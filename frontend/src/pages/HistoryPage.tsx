@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { getRecentEntries, setEntryFavorite } from '../api/client';
+import { useEffect, useState } from 'react';
+import { deleteEntry, getRecentEntries, setEntryFavorite } from '../api/client';
 import { usePlayer } from '../hooks/usePlayer';
+import { useToast } from '../components/Toast';
 import PageHeader from '../components/PageHeader';
 import CoverImage from '../components/CoverImage';
 import { getEmotionBg, getEmotionBorder, getEmotionText } from '../utils/emotion';
@@ -11,6 +12,7 @@ export default function HistoryPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const { setPlaylist, playAt } = usePlayer();
+  const { showError, showSuccess } = useToast();
 
   useEffect(() => {
     getRecentEntries()
@@ -28,6 +30,19 @@ export default function HistoryPage() {
     setEntries(current => current.map(item => (
       item.id === entry.id ? { ...item, is_favorite: result.is_favorite } : item
     )));
+  };
+
+  const handleDelete = async (entry: Entry) => {
+    const ok = window.confirm('删除后将移除这一天的日记和歌单，确定删除吗？');
+    if (!ok) return;
+    try {
+      await deleteEntry(entry.id);
+      setEntries(current => current.filter(item => item.id !== entry.id));
+      setExpandedId(current => current === entry.id ? null : current);
+      showSuccess('已删除这一天的日记和歌单');
+    } catch {
+      showError('删除失败，请稍后再试');
+    }
   };
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -132,7 +147,7 @@ export default function HistoryPage() {
                   </div>
                 </div>
 
-                {isExpanded && (
+                {isExpanded && entry.playlist?.songs && entry.playlist.songs.length > 0 && (
                   <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 16, animation: 'fadeIn 0.2s ease' }}>
                     <div style={{
                       background: 'var(--bg-input)',
@@ -146,61 +161,66 @@ export default function HistoryPage() {
                       {entry.content}
                     </div>
 
-                    {entry.playlist?.songs && entry.playlist.songs.length > 0 && (
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
-                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 760 }}>
-                            当日歌单 · {entry.playlist.songs.length} 首
-                          </div>
-                          <div style={{ display: 'flex', gap: 8 }}>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handlePlay(entry.playlist!.songs); }}
-                              className="primary-button"
-                              style={{ minHeight: 34, borderRadius: 10, padding: '0 13px' }}
-                            >
-                              播放全部
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleFavorite(entry); }}
-                              className="ghost-button"
-                              style={{ minHeight: 34, borderRadius: 10, padding: '0 13px' }}
-                            >
-                              {entry.is_favorite ? '取消收藏' : '收藏这一天'}
-                            </button>
-                          </div>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 760 }}>
+                          当日歌单 · {entry.playlist.songs.length} 首
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {entry.playlist.songs.map((song, idx) => (
-                            <button
-                              key={song.id}
-                              onClick={(e) => { e.stopPropagation(); handlePlay(entry.playlist!.songs, idx); }}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 10,
-                                padding: 9,
-                                borderRadius: 12,
-                                background: 'rgba(255,255,255,0.5)',
-                                textAlign: 'left',
-                              }}
-                            >
-                              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', width: 22, textAlign: 'center', fontWeight: 760 }}>
-                                {idx + 1}
-                              </div>
-                              <CoverImage song={song} size={40} />
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {song.name}
-                                </div>
-                                <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {song.artist || 'Unknown'}
-                                </div>
-                              </div>
-                            </button>
-                          ))}
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handlePlay(entry.playlist!.songs); }}
+                            className="primary-button"
+                            style={{ minHeight: 34, borderRadius: 10, padding: '0 13px' }}
+                          >
+                            播放全部
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleFavorite(entry); }}
+                            className="ghost-button"
+                            style={{ minHeight: 34, borderRadius: 10, padding: '0 13px' }}
+                          >
+                            {entry.is_favorite ? '取消收藏' : '收藏这一天'}
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(entry); }}
+                            className="ghost-button"
+                            style={{ minHeight: 34, borderRadius: 10, padding: '0 13px', color: '#8A4038' }}
+                          >
+                            删除
+                          </button>
                         </div>
                       </div>
-                    )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {entry.playlist.songs.map((song, idx) => (
+                          <button
+                            key={song.id}
+                            onClick={(e) => { e.stopPropagation(); handlePlay(entry.playlist!.songs, idx); }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 10,
+                              padding: 9,
+                              borderRadius: 12,
+                              background: 'rgba(255,255,255,0.5)',
+                              textAlign: 'left',
+                            }}
+                          >
+                            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', width: 22, textAlign: 'center', fontWeight: 760 }}>
+                              {idx + 1}
+                            </div>
+                            <CoverImage song={song} size={40} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {song.name}
+                              </div>
+                              <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {song.artist || 'Unknown'}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </article>

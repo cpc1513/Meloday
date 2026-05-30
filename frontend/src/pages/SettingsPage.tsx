@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import PageHeader from '../components/PageHeader';
 import { clearRuntimeCache, getRecentEntries, getSettingsStatus, setApiKey } from '../api/client';
+import { formatLocalDate } from '../utils/date';
 import type { SettingsStatus } from '../types';
 
 const GITHUB_REPO_URL = 'https://github.com/cpc1513/Meloday';
@@ -37,7 +38,7 @@ export default function SettingsPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `meloday-backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `meloday-backup-${formatLocalDate(new Date())}.json`;
         a.click();
         URL.revokeObjectURL(url);
         setMessage('备份已导出');
