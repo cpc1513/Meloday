@@ -115,6 +115,8 @@ function startBackend() {
   }
 
   // 数据库放在用户数据目录，避免被重新打包覆盖
+  // Store runtime data in the current Windows user's app data folder.
+  // Release packages must never include or migrate the developer's local database.
   const userDataDir = app.getPath('userData');
   const userDbDir = path.join(userDataDir, 'data');
   const userDbPath = path.join(userDbDir, 'meloday.db');
@@ -122,12 +124,6 @@ function startBackend() {
     fs.mkdirSync(userDbDir, { recursive: true });
   }
   // 首次启动：如果 resources/data/meloday.db 存在，迁移到用户目录
-  const bundledDbPath = path.join(process.resourcesPath, 'data', 'meloday.db');
-  if (fs.existsSync(bundledDbPath) && !fs.existsSync(userDbPath)) {
-    fs.copyFileSync(bundledDbPath, userDbPath);
-    console.log('[Electron] Migrated database to:', userDbPath);
-  }
-
   console.log('[Electron] Starting backend from:', backendEntry);
   console.log('[Electron] Database path:', userDbPath);
 
