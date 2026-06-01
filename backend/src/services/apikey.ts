@@ -90,6 +90,10 @@ export async function setUserApiKey(apiKey: string): Promise<void> {
   }
 }
 
+export async function deleteUserApiKey(): Promise<void> {
+  await run('DELETE FROM settings WHERE key = ?', [KEY_USER_API_KEY]);
+}
+
 export async function getOrCreateDeviceId(): Promise<string> {
   const row = await get<{ value: string }>(
     'SELECT value FROM settings WHERE key = ?',

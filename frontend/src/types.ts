@@ -49,9 +49,12 @@ export interface LyricLine {
 export interface SettingsStatus {
   status: 'ok';
   deepseek_configured: boolean;
+  ai_provider: 'proxy' | 'user_key' | 'unavailable';
   generation_count: number;
   generation_limit: number;
+  generation_left: number;
   has_user_key: boolean;
+  has_proxy_token: boolean;
   database_path: string;
   music_source?: string;
   music_source_label?: string;

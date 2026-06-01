@@ -15,12 +15,14 @@ export default function MiniPlayer() {
   const {
     currentSong, isPlaying, togglePlay, duration, progress, setTimeInfo,
     next, prev, playlist, currentIndex, playAt, volume, setVolume, setLoading,
+    seekRequest, seekTo,
   } = usePlayer();
   const { play, pause, seek, setVolume: setAudioVolume } = useAudio();
   const { showError } = useToast();
   const navigate = useNavigate();
   const progressRef = useRef<HTMLDivElement>(null);
   const consecutiveFailuresRef = useRef(0);
+  const lastSeekRequestIdRef = useRef(0);
   const [expanded, setExpanded] = useState(false);
   const [playbackStage, setPlaybackStage] = useState<PlaybackStage>('idle');
 
@@ -40,6 +42,13 @@ export default function MiniPlayer() {
   }, [isPlaying, pause, setLoading]);
 
   useEffect(() => {
+    if (!seekRequest || seekRequest.id === lastSeekRequestIdRef.current) return;
+    lastSeekRequestIdRef.current = seekRequest.id;
+    seek(seekRequest.time);
+    setTimeInfo(seekRequest.time, duration);
+  }, [duration, seek, seekRequest, setTimeInfo]);
+
+  useEffect(() => {
     if (!currentSong || canPlayCurrentSong || !isPlaying) return;
     showError('这首歌暂时没有可用的 QQ 音乐播放资源，正在尝试下一首');
     if (playlist.length > 1) {
@@ -54,6 +63,7 @@ export default function MiniPlayer() {
 
     let cancelled = false;
     const songId = currentSong.id;
+    let cleanupAudioListeners = () => {};
 
     const handleFailure = (err: unknown) => {
       if (cancelled) return;
@@ -143,8 +153,6 @@ export default function MiniPlayer() {
       }
     };
 
-    let cleanupAudioListeners = () => {};
-
     loadAndPlay();
 
     return () => {
@@ -176,10 +184,8 @@ export default function MiniPlayer() {
     if (!progressRef.current || !duration) return;
     const rect = progressRef.current.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const targetTime = ratio * duration;
-    seek(targetTime);
-    setTimeInfo(targetTime, duration);
-  }, [duration, seek, setTimeInfo]);
+    seekTo(ratio * duration);
+  }, [duration, seekTo]);
 
   const handleTogglePlay = useCallback(() => {
     if (isPlaying) {

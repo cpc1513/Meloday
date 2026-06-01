@@ -71,6 +71,11 @@ export async function setApiKey(apikey: string): Promise<{ ok: boolean }> {
   return res.data;
 }
 
+export async function deleteApiKey(): Promise<{ ok: boolean }> {
+  const res = await client.delete('/settings/apikey');
+  return res.data;
+}
+
 export async function clearRuntimeCache(): Promise<{ ok: boolean }> {
   const res = await client.delete('/settings/cache');
   return res.data;

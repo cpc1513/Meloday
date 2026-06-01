@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import PageHeader from '../components/PageHeader';
-import { clearRuntimeCache, getRecentEntries, getSettingsStatus, setApiKey } from '../api/client';
+import { clearRuntimeCache, deleteApiKey, getRecentEntries, getSettingsStatus, setApiKey } from '../api/client';
 import { formatLocalDate } from '../utils/date';
 import type { SettingsStatus } from '../types';
 
@@ -12,6 +12,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState('');
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [savingKey, setSavingKey] = useState(false);
+  const [removingKey, setRemovingKey] = useState(false);
 
   const loadStatus = useCallback((showChecking: boolean) => {
     if (showChecking) setApiStatus('checking');
@@ -51,12 +52,25 @@ export default function SettingsPage() {
     try {
       await setApiKey(apiKeyInput.trim());
       setApiKeyInput('');
-      setMessage('API Key 已保存');
+      setMessage('API Key 已保存，当前会优先使用自有 Key');
       loadStatus(true);
     } catch {
       setMessage('保存失败，请重试');
     } finally {
       setSavingKey(false);
+    }
+  };
+
+  const handleRemoveApiKey = async () => {
+    setRemovingKey(true);
+    try {
+      await deleteApiKey();
+      setMessage('已移除自有 Key，后续会切回官方免费额度');
+      loadStatus(true);
+    } catch {
+      setMessage('移除失败，请稍后重试');
+    } finally {
+      setRemovingKey(false);
     }
   };
 
@@ -74,9 +88,10 @@ export default function SettingsPage() {
     setMessage('歌词缓存已清理');
   };
 
-  const generationLeft = settings ? Math.max(0, settings.generation_limit - settings.generation_count) : 0;
-  const quotaExhausted = settings ? generationLeft === 0 && !settings.has_user_key : false;
-  const quotaLabel = `剩余生成次数 ${generationLeft} / ${settings?.generation_limit ?? 365}`;
+  const generationLeft = settings?.generation_left ?? Math.max(0, (settings?.generation_limit ?? 365) - (settings?.generation_count ?? 0));
+  const generationLimit = settings?.generation_limit ?? 365;
+  const quotaLabel = `剩余生成次数 ${generationLeft} / ${generationLimit}`;
+  const providerInfo = getProviderInfo(settings);
 
   return (
     <div className="page page-narrow">
@@ -109,22 +124,18 @@ export default function SettingsPage() {
 
         <SettingCard
           title="DeepSeek 配置"
-          desc={settings?.has_user_key
-            ? `正在使用你自己的 DeepSeek API Key，${quotaLabel}`
-            : quotaExhausted
-              ? '免费生成次数已用完，请填写你自己的 DeepSeek API Key'
-              : quotaLabel}
+          desc={providerInfo.desc}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-            <div style={{ fontSize: 13, color: settings?.has_user_key ? 'var(--accent-green)' : quotaExhausted ? '#B0544A' : 'var(--accent-green)', fontWeight: 760 }}>
-              {settings?.has_user_key ? '自有 Key' : quotaExhausted ? '已用完' : quotaLabel}
+            <div style={{ fontSize: 13, color: providerInfo.color, fontWeight: 760 }}>
+              {providerInfo.label}
             </div>
-            {settings?.has_user_key && (
+            {settings?.ai_provider !== 'user_key' && (
               <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 700 }}>
                 {quotaLabel}
               </div>
             )}
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <input
                 type="password"
                 placeholder="输入你的 DeepSeek API Key"
@@ -149,6 +160,16 @@ export default function SettingsPage() {
               >
                 {savingKey ? '保存中...' : '保存'}
               </button>
+              {settings?.ai_provider === 'user_key' && (
+                <button
+                  onClick={handleRemoveApiKey}
+                  disabled={removingKey}
+                  className="ghost-button"
+                  style={{ minHeight: 30, padding: '0 14px', borderRadius: 8, fontSize: 12, opacity: removingKey ? 0.6 : 1 }}
+                >
+                  {removingKey ? '移除中...' : '移除自有 Key'}
+                </button>
+              )}
             </div>
           </div>
         </SettingCard>
@@ -167,7 +188,7 @@ export default function SettingsPage() {
 
         <SettingCard title="关于" desc="Meloday 音乐日记">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end', fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 700 }}>
-            <span>版本 {settings?.version || '1.0.2'}</span>
+            <span>版本 {settings?.version || '1.0.4'}</span>
             <a href={GITHUB_REPO_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)' }}>
               GitHub 仓库
             </a>
@@ -188,10 +209,39 @@ export default function SettingsPage() {
   );
 }
 
+function getProviderInfo(settings: SettingsStatus | null) {
+  if (!settings) {
+    return {
+      label: '检测中...',
+      desc: '正在读取 DeepSeek 配置状态',
+      color: 'var(--text-tertiary)',
+    };
+  }
+  if (settings.ai_provider === 'user_key') {
+    return {
+      label: '正在使用自有 DeepSeek API Key',
+      desc: '本机已保存自有 Key，生成时会优先使用它，不消耗官方免费额度。',
+      color: 'var(--accent-green)',
+    };
+  }
+  if (settings.ai_provider === 'proxy') {
+    return {
+      label: '官方免费额度',
+      desc: `当前使用 Meloday 官方代理额度，剩余生成次数 ${settings.generation_left} / ${settings.generation_limit}。`,
+      color: 'var(--accent-green)',
+    };
+  }
+  return {
+    label: '免费额度不可用',
+    desc: '当前没有可用的官方免费额度，请配置你自己的 DeepSeek API Key。',
+    color: '#B0544A',
+  };
+}
+
 function SettingCard({ title, desc, children }: { title: string; desc: string; children: React.ReactNode }) {
   return (
     <section className="glass-panel" style={{ borderRadius: 18, padding: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 18, marginBottom: 5 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 18, marginBottom: 5, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 15, fontWeight: 760, color: 'var(--text-primary)' }}>{title}</div>
         {children}
       </div>

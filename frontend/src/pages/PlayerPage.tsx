@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import PageHeader from '../components/PageHeader';
 import CoverImage from '../components/CoverImage';
@@ -7,16 +7,20 @@ import { usePlayer } from '../hooks/usePlayer';
 import { useToast } from '../components/Toast';
 import type { LyricLine } from '../types';
 
+const LYRIC_MANUAL_SCROLL_GUARD_MS = 3000;
+
 export default function PlayerPage() {
   const {
     currentSong, playlist, currentIndex, currentTime, duration, progress, isPlaying,
-    togglePlay, prev, next, playAt, volume, setVolume, updateFavoriteForEntry,
+    togglePlay, prev, next, playAt, volume, setVolume, updateFavoriteForEntry, seekTo,
   } = usePlayer();
   const { showError, showSuccess } = useToast();
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [lyricsSongId, setLyricsSongId] = useState<number | null>(null);
   const [lyricsMessage, setLyricsMessage] = useState('');
   const [isFavoriteBusy, setIsFavoriteBusy] = useState(false);
+  const lyricLineRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const userLyricScrollUntilRef = useRef(0);
 
   useEffect(() => {
     if (!currentSong?.id) return;
@@ -54,6 +58,19 @@ export default function PlayerPage() {
     }
     return active;
   }, [currentTime, lyricsForCurrentSong]);
+
+  useEffect(() => {
+    if (activeLyricIndex < 0) return;
+    if (Date.now() < userLyricScrollUntilRef.current) return;
+    lyricLineRefs.current[activeLyricIndex]?.scrollIntoView({
+      block: 'center',
+      behavior: 'smooth',
+    });
+  }, [activeLyricIndex]);
+
+  const handleLyricsScroll = () => {
+    userLyricScrollUntilRef.current = Date.now() + LYRIC_MANUAL_SCROLL_GUARD_MS;
+  };
 
   const entryId = currentSong?.entry_id;
   const isFavorite = Boolean(currentSong?.is_favorite);
@@ -142,16 +159,20 @@ export default function PlayerPage() {
           </div>
 
           {lyricsForCurrentSong.length ? (
-            <div className="player-scroll">
+            <div className="player-scroll" onScroll={handleLyricsScroll}>
               {lyricsForCurrentSong.map((line, index) => {
                 const active = index === activeLyricIndex;
                 return (
-                  <div
+                  <button
                     key={`${line.time}-${line.text}`}
+                    type="button"
+                    ref={node => { lyricLineRefs.current[index] = node; }}
+                    onClick={() => seekTo(line.time)}
                     className={active ? 'player-lyric-line active' : 'player-lyric-line'}
+                    title={`跳转到 ${formatTime(line.time)}`}
                   >
                     {line.text}
-                  </div>
+                  </button>
                 );
               })}
             </div>

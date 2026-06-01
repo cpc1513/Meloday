@@ -431,12 +431,20 @@ a {
 }
 
 .player-lyric-line {
+  display: block;
+  width: 100%;
   padding: 9px 0;
+  text-align: left;
   font-size: 15px;
   line-height: 1.55;
   font-weight: 600;
   color: var(--text-tertiary);
+  cursor: pointer;
   transition: font-size 0.18s ease, color 0.18s ease;
+}
+
+.player-lyric-line:hover {
+  color: var(--text-secondary);
 }
 
 .player-lyric-line.active {

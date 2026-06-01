@@ -1,21 +1,26 @@
-const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell, Tray, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 
 let mainWindow;
 let backendProcess;
+let tray;
+let isQuitting = false;
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
-    }
+    showMainWindow();
   });
+}
+
+function getAppIconPath() {
+  const pngPath = path.join(__dirname, '../dist/meloday-app-icon.png');
+  const icoPath = path.join(__dirname, '../dist/meloday-app-icon.ico');
+  return fs.existsSync(pngPath) ? pngPath : icoPath;
 }
 
 function createWindow() {
@@ -27,7 +32,7 @@ function createWindow() {
     frame: false,
     titleBarStyle: 'hidden',
     trafficLightPosition: { x: 16, y: 14 },
-    icon: path.join(__dirname, '../dist/meloday-app-icon.png'),
+    icon: getAppIconPath(),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -38,16 +43,67 @@ function createWindow() {
     show: false,
   });
 
-  // 加载前端
   mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
   });
 
+  mainWindow.on('close', async (event) => {
+    if (isQuitting) return;
+    event.preventDefault();
+
+    const { response } = await dialog.showMessageBox(mainWindow, {
+      type: 'question',
+      title: '关闭 Meloday',
+      message: '要最小化到托盘继续运行，还是直接退出？',
+      detail: '最小化到托盘后，播放和本地服务会继续运行。',
+      buttons: ['最小化到托盘', '直接退出', '取消'],
+      defaultId: 0,
+      cancelId: 2,
+      noLink: true,
+    });
+
+    if (response === 0) {
+      mainWindow?.hide();
+    } else if (response === 1) {
+      isQuitting = true;
+      app.quit();
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+}
+
+function showMainWindow() {
+  if (!mainWindow) {
+    createWindow();
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function createTray() {
+  if (tray) return;
+  tray = new Tray(getAppIconPath());
+  tray.setToolTip('Meloday');
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: '显示 Meloday', click: showMainWindow },
+    { label: '最小化到托盘', click: () => mainWindow?.hide() },
+    { type: 'separator' },
+    {
+      label: '退出',
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ]));
+  tray.on('double-click', showMainWindow);
 }
 
 ipcMain.handle('window:minimize', () => {
@@ -98,23 +154,19 @@ function readProxyToken(isPackaged) {
 }
 
 function startBackend() {
-  // 判断是否在打包后的环境
   const isPackaged = app.isPackaged;
 
   let backendPath;
   let backendEntry;
 
   if (isPackaged) {
-    // 打包后：后端在 extraResources 里
     backendPath = path.join(process.resourcesPath, 'backend');
     backendEntry = path.join(backendPath, 'dist', 'index.js');
   } else {
-    // 开发时：后端在项目根目录的 backend/ 里
     backendPath = path.join(__dirname, '..', '..', 'backend');
     backendEntry = path.join(backendPath, 'dist', 'index.js');
   }
 
-  // 数据库放在用户数据目录，避免被重新打包覆盖
   // Store runtime data in the current Windows user's app data folder.
   // Release packages must never include or migrate the developer's local database.
   const userDataDir = app.getPath('userData');
@@ -123,7 +175,7 @@ function startBackend() {
   if (!fs.existsSync(userDbDir)) {
     fs.mkdirSync(userDbDir, { recursive: true });
   }
-  // 首次启动：如果 resources/data/meloday.db 存在，迁移到用户目录
+
   console.log('[Electron] Starting backend from:', backendEntry);
   console.log('[Electron] Database path:', userDbPath);
 
@@ -159,7 +211,7 @@ function startBackend() {
     console.error('[Backend Process Error]', err);
   });
 
-  // 兜底：3秒后如果窗口还没打开，直接打开
+  // Fallback: open the window even if the backend log wording changes.
   setTimeout(() => {
     if (!mainWindow) {
       createWindow();
@@ -169,19 +221,24 @@ function startBackend() {
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
+  createTray();
   startBackend();
 });
 
 app.on('window-all-closed', () => {
-  if (backendProcess) {
-    backendProcess.kill();
-    backendProcess = null;
+  if (isQuitting) {
+    app.quit();
   }
-  app.quit();
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+  showMainWindow();
+});
+
+app.on('before-quit', () => {
+  isQuitting = true;
+  if (backendProcess) {
+    backendProcess.kill();
+    backendProcess = null;
   }
 });

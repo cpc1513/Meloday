@@ -11,6 +11,7 @@ interface PlayerContextType {
   duration: number;
   isLoading: boolean;
   volume: number;
+  seekRequest: { id: number; time: number } | null;
   setPlaylist: (songs: Song[]) => void;
   playAt: (index: number) => void;
   togglePlay: () => void;
@@ -18,6 +19,7 @@ interface PlayerContextType {
   prev: () => void;
   setProgress: (progress: number) => void;
   setTimeInfo: (currentTime: number, duration: number) => void;
+  seekTo: (seconds: number) => void;
   setLoading: (loading: boolean) => void;
   setVolume: (volume: number) => void;
   updateFavoriteForEntry: (entryId: number, isFavorite: boolean) => void;
@@ -33,6 +35,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [seekRequest, setSeekRequest] = useState<{ id: number; time: number } | null>(null);
   const [volume, setVolumeState] = useState(() => {
     const saved = Number(localStorage.getItem('meloday_volume'));
     return Number.isFinite(saved) ? Math.min(1, Math.max(0, saved)) : 0.8;
@@ -85,6 +88,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const seekTo = useCallback((seconds: number) => {
+    const nextTime = Math.max(0, Number.isFinite(seconds) ? seconds : 0);
+    setCurrentTime(nextTime);
+    setSeekRequest(prev => ({ id: (prev?.id || 0) + 1, time: nextTime }));
+    if (duration > 0) {
+      setProgress((nextTime / duration) * 100);
+    }
+  }, [duration]);
+
   const setVolume = useCallback((nextVolume: number) => {
     const normalized = Math.min(1, Math.max(0, nextVolume));
     setVolumeState(normalized);
@@ -100,9 +112,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   return (
     <PlayerContext.Provider value={{
       playlist, currentIndex, currentSong, isPlaying,
-      progress, currentTime, duration, isLoading, volume,
+      progress, currentTime, duration, isLoading, volume, seekRequest,
       setPlaylist, playAt, togglePlay, next, prev,
-      setProgress, setTimeInfo, setLoading: setIsLoading, setVolume, updateFavoriteForEntry
+      setProgress, setTimeInfo, seekTo, setLoading: setIsLoading, setVolume, updateFavoriteForEntry
     }}>
       {children}
     </PlayerContext.Provider>
