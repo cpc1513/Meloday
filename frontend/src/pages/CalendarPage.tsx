@@ -23,7 +23,7 @@ export default function CalendarPage() {
 
   return (
     <div className="page calendar-page">
-      <PageHeader title="日历" subtitle="把每一天的心情，留成一格音乐记忆" />
+      <PageHeader title="日历" subtitle="把每一天的心情，留成一格音乐记忆。" />
 
       <div className="calendar-page-grid">
         <CalendarGrid

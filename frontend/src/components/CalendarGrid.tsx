@@ -29,14 +29,16 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [entryDays, setEntryDays] = useState<Record<string, CalendarDay>>({});
-  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     getCalendar(year, month).then(data => {
+      if (cancelled) return;
       const map: Record<string, CalendarDay> = {};
       data.days.forEach(d => { map[d.date] = d; });
       setEntryDays(map);
     });
+    return () => { cancelled = true; };
   }, [year, month]);
 
   const cells = useMemo(() => {
@@ -70,20 +72,24 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
   const rowCount = Math.ceil(cells.length / 7);
 
   const goPrev = () => {
-    setYear(y => month === 1 ? y - 1 : y);
-    setMonth(m => m === 1 ? 12 : m - 1);
+    const nextMonth = month === 1 ? 12 : month - 1;
+    const nextYear = month === 1 ? year - 1 : year;
+    setYear(nextYear);
+    setMonth(nextMonth);
   };
 
   const goNext = () => {
-    setYear(y => month === 12 ? y + 1 : y);
-    setMonth(m => m === 12 ? 1 : m + 1);
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? year + 1 : year;
+    setYear(nextYear);
+    setMonth(nextMonth);
   };
 
   const selectDate = (dateStr: string) => {
-    const [nextYear, nextMonth] = dateStr.split('-').map(Number);
-    setYear(nextYear);
-    setMonth(nextMonth);
-    setPickerOpen(false);
+    const parsed = parseDateParts(dateStr);
+    if (!parsed) return;
+    setYear(parsed.year);
+    setMonth(parsed.month);
     onSelectDay?.(entryDays[dateStr] || toCalendarDay(dateStr));
   };
 
@@ -92,16 +98,7 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
   };
 
   const handleClick = (cell: CalendarCell) => {
-    onSelectDay?.({
-      date: cell.date,
-      has_entry: cell.hasEntry,
-      emotions: cell.emotions,
-      song_cover: cell.songCover,
-      emotion_color: cell.emotionColor,
-      emotion_keyword: cell.emotionKeyword,
-      holiday: cell.holiday,
-      is_favorite: cell.isFavorite,
-    });
+    onSelectDay?.(cellToCalendarDay(cell));
   };
 
   return (
@@ -114,19 +111,15 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
         <div className="calendar-actions">
           <button onClick={goPrev} aria-label="上个月" className="icon-button"><ChevronLeft /></button>
           <button onClick={goNext} aria-label="下个月" className="icon-button"><ChevronRight /></button>
-          <div className="calendar-picker-wrap">
-            <button onClick={() => setPickerOpen(open => !open)} className="ghost-button">选择日期</button>
-            {pickerOpen && (
-              <div className="calendar-picker-popover">
-                <input
-                  aria-label="选择日期"
-                  type="date"
-                  value={selectedDate || formatLocalDate(now)}
-                  onChange={event => selectDate(event.target.value)}
-                />
-              </div>
-            )}
-          </div>
+          <label className="calendar-date-input">
+            <span>选择日期</span>
+            <input
+              aria-label="选择日期"
+              type="date"
+              value={selectedDate || formatLocalDate(now)}
+              onChange={event => selectDate(event.target.value)}
+            />
+          </label>
           <button onClick={goToday} className="ghost-button">今天</button>
         </div>
       </div>
@@ -198,6 +191,26 @@ export default function CalendarGrid({ onSelectDay, selectedDate }: Props) {
       </div>
     </section>
   );
+}
+
+function parseDateParts(date: string): { year: number; month: number } | null {
+  const [year, month] = date.split('-').map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return null;
+  if (month < 1 || month > 12) return null;
+  return { year, month };
+}
+
+function cellToCalendarDay(cell: CalendarCell): CalendarDay {
+  return {
+    date: cell.date,
+    has_entry: cell.hasEntry,
+    emotions: cell.emotions,
+    song_cover: cell.songCover,
+    emotion_color: cell.emotionColor,
+    emotion_keyword: cell.emotionKeyword,
+    holiday: cell.holiday,
+    is_favorite: cell.isFavorite,
+  };
 }
 
 function toCell(date: string, dayOfMonth: number, isCurrentMonth: boolean, entry?: CalendarDay): CalendarCell {

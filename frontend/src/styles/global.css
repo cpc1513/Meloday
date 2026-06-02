@@ -587,29 +587,27 @@ a {
   position: relative;
 }
 
-.calendar-picker-wrap {
-  position: relative;
-}
-
-.calendar-picker-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 20;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: var(--shadow-sm);
-}
-
-.calendar-picker-popover input {
+.calendar-date-input {
   min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 0 10px;
-  border: 1px solid var(--border-light);
   border-radius: 10px;
-  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  background: rgba(255, 255, 255, 0.58);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.calendar-date-input input {
+  min-height: 34px;
+  border: 0;
+  background: transparent;
   color: var(--text-primary);
+  font: inherit;
+  outline: none;
 }
 
 .calendar-weekdays {
