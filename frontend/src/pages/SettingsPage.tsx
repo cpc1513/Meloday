@@ -65,7 +65,7 @@ export default function SettingsPage() {
     setRemovingKey(true);
     try {
       await deleteApiKey();
-      setMessage('已移除自有 Key，后续会切回官方免费额度');
+      setMessage('已移除自有 Key，后续会切回官方云端免费额度');
       loadStatus(true);
     } catch {
       setMessage('移除失败，请稍后重试');
@@ -88,7 +88,7 @@ export default function SettingsPage() {
     setMessage('歌词缓存已清理');
   };
 
-  const generationLeft = settings?.generation_left ?? Math.max(0, (settings?.generation_limit ?? 365) - (settings?.generation_count ?? 0));
+  const generationLeft = settings?.generation_left ?? 0;
   const generationLimit = settings?.generation_limit ?? 365;
   const quotaLabel = `剩余生成次数 ${generationLeft} / ${generationLimit}`;
   const providerInfo = getProviderInfo(settings);
@@ -104,17 +104,14 @@ export default function SettingsPage() {
           </button>
         </SettingCard>
 
-        <SettingCard title="服务状态" desc="检查本地后端服务是否正常运行">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{
-              width: 9,
-              height: 9,
-              borderRadius: '50%',
-              background: apiStatus === 'ok' ? 'var(--accent-green)' : apiStatus === 'error' ? '#B0544A' : '#C79A4F',
-              boxShadow: apiStatus === 'checking' ? '0 0 0 4px rgba(199,154,79,0.14)' : 'none',
-            }} />
+        <SettingCard title="服务状态" desc="检查本地后端服务与云端 AI 网关是否正常运行">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <StatusDot status={apiStatus} />
             <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 650 }}>
-              {apiStatus === 'ok' ? '运行正常' : apiStatus === 'error' ? '连接失败' : '检测中...'}
+              {apiStatus === 'ok' ? '本地服务正常' : apiStatus === 'error' ? '本地连接失败' : '检测中...'}
+            </span>
+            <span style={{ fontSize: 12, color: settings?.cloud_ai_available ? 'var(--accent-green)' : '#B0544A', fontWeight: 700 }}>
+              {settings?.cloud_ai_available ? '云端 AI 可用' : '云端 AI 未连接'}
             </span>
             <button onClick={() => loadStatus(true)} className="ghost-button" style={{ minHeight: 30, padding: '0 11px' }}>
               刷新
@@ -122,10 +119,7 @@ export default function SettingsPage() {
           </div>
         </SettingCard>
 
-        <SettingCard
-          title="DeepSeek 配置"
-          desc={providerInfo.desc}
-        >
+        <SettingCard title="DeepSeek 配置" desc={providerInfo.desc}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
             <div style={{ fontSize: 13, color: providerInfo.color, fontWeight: 760 }}>
               {providerInfo.label}
@@ -133,6 +127,11 @@ export default function SettingsPage() {
             {settings?.ai_provider !== 'user_key' && (
               <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 700 }}>
                 {quotaLabel}
+              </div>
+            )}
+            {settings?.device_id && (
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 650, maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                设备 ID：{settings.device_id}
               </div>
             )}
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -188,7 +187,7 @@ export default function SettingsPage() {
 
         <SettingCard title="关于" desc="Meloday 音乐日记">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end', fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 700 }}>
-            <span>版本 {settings?.version || '1.0.4'}</span>
+            <span>版本 {settings?.version || '1.0.6'}</span>
             <a href={GITHUB_REPO_URL} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)' }}>
               GitHub 仓库
             </a>
@@ -209,6 +208,18 @@ export default function SettingsPage() {
   );
 }
 
+function StatusDot({ status }: { status: 'checking' | 'ok' | 'error' }) {
+  return (
+    <span style={{
+      width: 9,
+      height: 9,
+      borderRadius: '50%',
+      background: status === 'ok' ? 'var(--accent-green)' : status === 'error' ? '#B0544A' : '#C79A4F',
+      boxShadow: status === 'checking' ? '0 0 0 4px rgba(199,154,79,0.14)' : 'none',
+    }} />
+  );
+}
+
 function getProviderInfo(settings: SettingsStatus | null) {
   if (!settings) {
     return {
@@ -220,20 +231,20 @@ function getProviderInfo(settings: SettingsStatus | null) {
   if (settings.ai_provider === 'user_key') {
     return {
       label: '正在使用自有 DeepSeek API Key',
-      desc: '本机已保存自有 Key，生成时会优先使用它，不消耗官方免费额度。',
+      desc: '本机已保存自有 Key，生成时会优先使用它，不消耗官方云端免费额度。',
       color: 'var(--accent-green)',
     };
   }
-  if (settings.ai_provider === 'proxy') {
+  if (settings.ai_provider === 'cloud' || settings.ai_provider === 'proxy') {
     return {
-      label: '官方免费额度',
-      desc: `当前使用 Meloday 官方代理额度，剩余生成次数 ${settings.generation_left} / ${settings.generation_limit}。`,
+      label: '官方云端免费额度',
+      desc: `当前使用 Meloday 云端 AI 网关，剩余生成次数 ${settings.generation_left} / ${settings.generation_limit}。`,
       color: 'var(--accent-green)',
     };
   }
   return {
-    label: '免费额度不可用',
-    desc: '当前没有可用的官方免费额度，请配置你自己的 DeepSeek API Key。',
+    label: '官方云端额度不可用',
+    desc: '当前无法连接官方云端 AI 网关，请稍后重试，或配置你自己的 DeepSeek API Key。',
     color: '#B0544A',
   };
 }

@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { run } from '../db.js';
 import { deleteUserApiKey, getGenerationInfo, setUserApiKey } from '../services/apikey.js';
+import { CLOUD_AI_BASE_URL, getCloudAiStatus } from '../services/cloudai.js';
 
 const router = Router();
 
@@ -11,27 +12,35 @@ const databasePath = process.env.DATABASE_PATH || path.join(__dirname, '..', '..
 
 router.get('/status', async (_req, res) => {
   const generationInfo = await getGenerationInfo();
-  const generationLeft = Math.max(0, generationInfo.generationLimit - generationInfo.generationCount);
+  const cloudStatus = await getCloudAiStatus(generationInfo.deviceId);
+  const cloudAvailable = Boolean(cloudStatus?.ok && cloudStatus.hasDeepSeekKey);
   const aiProvider = generationInfo.hasUserKey
     ? 'user_key'
-    : generationInfo.hasProxyToken
-      ? 'proxy'
+    : cloudAvailable && (cloudStatus?.generationLeft ?? 0) > 0
+      ? 'cloud'
       : 'unavailable';
+
+  const generationLimit = cloudStatus?.generationLimit ?? generationInfo.generationLimit;
+  const generationCount = cloudStatus?.generationCount ?? generationInfo.generationCount;
+  const generationLeft = cloudStatus?.generationLeft ?? Math.max(0, generationLimit - generationCount);
 
   res.json({
     status: 'ok',
-    deepseek_configured: generationInfo.hasUserKey || generationInfo.hasProxyToken,
+    deepseek_configured: generationInfo.hasUserKey || cloudAvailable,
     ai_provider: aiProvider,
-    generation_count: generationInfo.generationCount,
-    generation_limit: generationInfo.generationLimit,
+    device_id: generationInfo.deviceId,
+    cloud_ai_available: cloudAvailable,
+    cloud_ai_url: CLOUD_AI_BASE_URL,
+    generation_count: generationCount,
+    generation_limit: generationLimit,
     generation_left: generationLeft,
     has_user_key: generationInfo.hasUserKey,
-    has_proxy_token: generationInfo.hasProxyToken,
+    has_proxy_token: false,
     database_path: databasePath,
     music_source: 'qq',
     music_source_label: 'QQ 音乐',
     music_source_mode: '免 cookie，受版权限制歌曲会自动跳过',
-    version: '1.0.5',
+    version: '1.0.6',
   });
 });
 

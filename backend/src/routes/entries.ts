@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { run, get, all } from '../db.js';
-import { incrementGenerationCountIfProxy } from '../services/apikey.js';
-import { analyzeEmotions, hasAiGenerationAccess, recommendPlaylist } from '../services/deepseek.js';
+import { generateDiaryMusicPlan, hasAiGenerationAccess } from '../services/deepseek.js';
 import { findPlayableSong } from '../services/qqmusic.js';
 
 const router = Router();
@@ -62,13 +61,13 @@ router.post('/', async (req, res) => {
     if (!await hasAiGenerationAccess()) {
       return res.status(402).json({
         error: 'QUOTA_EXHAUSTED',
-        message: '免费生成次数已用完，请在设置页配置你的 DeepSeek API Key',
+        message: '官方云端免费额度不可用或已用完，请稍后再试，或在设置页配置你自己的 DeepSeek API Key。',
       });
     }
 
-    const emotions = await analyzeEmotions(content);
-    const recommendations = await recommendPlaylist(content, emotions);
-    const songPromises = recommendations.map(async (rec, i) => {
+    const plan = await generateDiaryMusicPlan(content);
+    const emotions = plan.emotions;
+    const songPromises = plan.songs.map(async (rec, i) => {
       const keyword = `${rec.song} ${rec.artist}`;
       const qqSong = await findPlayableSong(keyword);
       if (!qqSong) return null;
@@ -91,7 +90,7 @@ router.post('/', async (req, res) => {
     if (songs.length < 3) {
       return res.status(502).json({
         error: 'SONGS_NOT_ENOUGH',
-        message: 'AI 已返回推荐，但 QQ 音乐没有找到足够可播放歌曲，请换一段日记内容或稍后再试',
+        message: 'AI 已返回推荐，但 QQ 音乐没有找到足够可播放歌曲，请换一段日记内容或稍后再试。',
       });
     }
 
@@ -127,8 +126,6 @@ router.post('/', async (req, res) => {
       );
     }
 
-    await incrementGenerationCountIfProxy();
-
     const playlistRows = await all(
       `SELECT s.*, p.entry_id, e.date as entry_date, e.is_favorite
        FROM songs s
@@ -154,15 +151,21 @@ router.post('/', async (req, res) => {
   } catch (e) {
     console.error(e);
     const err = e as Error;
-    if (err.message === 'QUOTA_EXHAUSTED' || err.message === 'PROXY_TOKEN_MISSING') {
+    if (err.message === 'QUOTA_EXHAUSTED') {
       return res.status(402).json({
         error: 'QUOTA_EXHAUSTED',
-        message: '免费生成次数已用完，请在设置页配置你的 DeepSeek API Key',
+        message: '官方云端免费额度已用完，请在设置页配置你自己的 DeepSeek API Key。',
+      });
+    }
+    if (err.message === 'CLOUD_AI_UNAVAILABLE') {
+      return res.status(503).json({
+        error: 'CLOUD_AI_UNAVAILABLE',
+        message: '官方云端生成服务暂时不可用，请稍后再试，或在设置页配置你自己的 DeepSeek API Key。',
       });
     }
     res.status(500).json({
       error: 'GENERATION_FAILED',
-      message: '生成歌单失败，请稍后再试',
+      message: '生成歌单失败，请稍后再试。',
     });
   }
 });

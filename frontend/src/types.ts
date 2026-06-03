@@ -49,7 +49,10 @@ export interface LyricLine {
 export interface SettingsStatus {
   status: 'ok';
   deepseek_configured: boolean;
-  ai_provider: 'proxy' | 'user_key' | 'unavailable';
+  ai_provider: 'cloud' | 'proxy' | 'user_key' | 'unavailable';
+  device_id?: string;
+  cloud_ai_available?: boolean;
+  cloud_ai_url?: string;
   generation_count: number;
   generation_limit: number;
   generation_left: number;

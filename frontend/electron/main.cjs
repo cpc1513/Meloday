@@ -37,8 +37,9 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.cjs'),
+      // QQ 音频、封面和本地 file:// 页面会跨源加载资源；保留该项避免播放链路被 Electron 拦截。
       webSecurity: false,
-      allowRunningInsecureContent: true,
+      allowRunningInsecureContent: false,
     },
     show: false,
   });
@@ -138,21 +139,6 @@ ipcMain.handle('app:open-data-directory', async () => {
   return { ok: true, path: dataDir };
 });
 
-function readProxyToken(isPackaged) {
-  try {
-    const keyPath = isPackaged
-      ? path.join(process.resourcesPath, 'backend', 'proxy-token.txt')
-      : path.join(__dirname, '..', '..', 'backend', 'proxy-token.txt');
-    if (fs.existsSync(keyPath)) {
-      const key = fs.readFileSync(keyPath, 'utf-8').trim();
-      if (key) return key;
-    }
-  } catch (e) {
-    console.error('[Electron] Failed to read proxy token:', e.message);
-  }
-  return '';
-}
-
 function startBackend() {
   const isPackaged = app.isPackaged;
 
@@ -187,8 +173,7 @@ function startBackend() {
       PORT: '3000',
       ELECTRON_RUN_AS_NODE: '1',
       DATABASE_PATH: userDbPath,
-      MELODAY_PROXY_URL: 'https://kmyppoy4p6bki.kimi.site/api/v1/deepseek',
-      MELODAY_PROXY_TOKEN: readProxyToken(isPackaged),
+      MELODAY_CLOUD_AI_URL: process.env.MELODAY_CLOUD_AI_URL || 'https://www.cpc1.asia/api/meloday',
     },
   });
 
